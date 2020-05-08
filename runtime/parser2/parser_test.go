@@ -392,4 +392,46 @@ func TestParseExpression(t *testing.T) {
 			result,
 		)
 	})
+
+	t.Run("invocation", func(t *testing.T) {
+		result, errors := Parse("f(1,2)")
+		require.Empty(t, errors)
+
+		assert.Equal(t,
+			&ast.InvocationExpression{
+				InvokedExpression: &ast.IdentifierExpression{
+					Identifier: ast.Identifier{
+						Identifier: "f",
+						Pos:        ast.Position{Offset: 0, Line: 0, Column: 1},
+					},
+				},
+				Arguments: []*ast.Argument{
+					{
+						Label: "",
+						Expression: &ast.IntegerExpression{
+							Value: big.NewInt(1),
+							Base:  10,
+							Range: ast.Range{
+								StartPos: ast.Position{Offset: 0, Line: 1, Column: 3},
+								EndPos:   ast.Position{Offset: 0, Line: 1, Column: 3},
+							},
+						},
+					},
+					{
+						Label: "",
+						Expression: &ast.IntegerExpression{
+							Value: big.NewInt(2),
+							Base:  10,
+							Range: ast.Range{
+								StartPos: ast.Position{Offset: 0, Line: 1, Column: 5},
+								EndPos:   ast.Position{Offset: 0, Line: 1, Column: 5},
+							},
+						},
+					},
+				},
+				EndPos: ast.Position{Offset: 0, Line: 1, Column: 6},
+			},
+			result,
+		)
+	})
 }
