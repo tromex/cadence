@@ -972,6 +972,39 @@ func TestInvocation(t *testing.T) {
 		)
 	})
 
+	t.Run("with labeled arguments", func(t *testing.T) {
+		result, errs := ParseExpression("f(  label :1)")
+		require.Empty(t, errs)
+
+		assert.Equal(t,
+			&ast.InvocationExpression{
+				InvokedExpression: &ast.IdentifierExpression{
+					Identifier: ast.Identifier{
+						Identifier: "f",
+						Pos:        ast.Position{Offset: 0, Line: 1, Column: 0},
+					},
+				},
+				Arguments: []*ast.Argument{
+					{
+						Label: "label",
+						LabelStartPos: &ast.Position{Offset: 2, Line: 1, Column: 2},
+						LabelEndPos: &ast.Position{Offset: 6, Line: 1, Column: 6}
+						Expression: &ast.IntegerExpression{
+							Value: big.NewInt(1),
+							Base:  10,
+							Range: ast.Range{
+								StartPos: ast.Position{Offset: 9, Line: 1, Column: 9},
+								EndPos:   ast.Position{Offset: 9, Line: 1, Column: 9},
+							},
+						},
+					},
+				},
+				EndPos: ast.Position{Offset: 3, Line: 1, Column: 3},
+			},
+			result,
+		)
+	})
+
 	t.Run("with arguments, multiple", func(t *testing.T) {
 		result, errs := ParseExpression("f(1,2)")
 		require.Empty(t, errs)

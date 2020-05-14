@@ -462,15 +462,42 @@ func parseArgumentListRemainder(p *parser) (arguments []*ast.Argument, endPos as
 					p.current.Type,
 				))
 			}
-			argument := &ast.Argument{
-				Label:      "",
-				Expression: parseExpression(p, lowestBindingPower),
-			}
-			arguments = append(arguments, argument)
+			arguments = append(arguments, parseArgument(p))
 			expectArgument = false
 		}
 	}
 	return
+}
+
+func parseArgument(p *parser) *ast.Argument {
+	p.skipSpaceAndComments(true)
+
+	var label string
+	var labelStartPos, labelEndPos ast.Position
+
+	if p.current.Is(lexer.TokenIdentifier) {
+		// We may have a label, store information about the potential label.
+		label = p.current.Value.(string)
+		labelStartPos = p.current.StartPos
+		labelEndPos = p.current.EndPos
+	}
+
+	p.skipSpaceAndComments(true)
+
+	if p.current.Is(lexer.TokenColon) {
+		// We have a label, the following value WAS a label.
+	} else {
+		// Could have been a EOF/ParenClose/EOF
+	}
+
+	// TODO
+
+	return &ast.Argument{
+		Label:         label,
+		LabelStartPos: &labelStartPos,
+		LabelEndPos:   &labelEndPos,
+		Expression:    {},
+	}
 }
 
 func defineNestedExpression() {
