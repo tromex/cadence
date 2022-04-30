@@ -57,7 +57,7 @@ type Runtime interface {
 	//
 	// This function returns an error if the program has errors (e.g syntax errors, type errors),
 	// or if the execution fails.
-	ExecuteTransaction(Script, Context) error
+	ExecuteTransaction(Script, Context, ...interpreter.Option) error
 
 	// InvokeContractFunction invokes a contract function with the given arguments.
 	//
@@ -661,7 +661,7 @@ func (r *interpreterRuntime) convertArgument(
 	return argument
 }
 
-func (r *interpreterRuntime) ExecuteTransaction(script Script, context Context) (err error) {
+func (r *interpreterRuntime) ExecuteTransaction(script Script, context Context, interpretOptions ...interpreter.Option) (err error) {
 	defer r.Recover(
 		func(internalErr error) {
 			err = internalErr
@@ -677,6 +677,8 @@ func (r *interpreterRuntime) ExecuteTransaction(script Script, context Context) 
 
 	var interpreterOptions []interpreter.Option
 	var checkerOptions []sema.Option
+
+	interpreterOptions = append(interpreterOptions, interpretOptions...)
 
 	functions := r.standardLibraryFunctions(
 		context,
@@ -1945,6 +1947,10 @@ func (r *interpreterRuntime) newAddPublicKeyFunction(
 	return interpreter.NewHostFunctionValue(
 		gauge,
 		func(invocation interpreter.Invocation) interpreter.Value {
+
+			fmt.Print("start AddPublicKey: ")
+			invocation.Interpreter.OnInvokedFunctionReturn(invocation.Interpreter, 0)
+
 			publicKeyValue, ok := invocation.Arguments[0].(*interpreter.ArrayValue)
 			if !ok {
 				panic(runtimeErrors.NewUnreachableError())
@@ -1955,6 +1961,9 @@ func (r *interpreterRuntime) newAddPublicKeyFunction(
 				panic("addPublicKey requires the first argument to be a byte array")
 			}
 
+			fmt.Print("before AddEncodedAccountKey: ")
+			invocation.Interpreter.OnInvokedFunctionReturn(invocation.Interpreter, 0)
+
 			wrapPanic(func() {
 				err = runtimeInterface.AddEncodedAccountKey(address, publicKey)
 			})
@@ -1964,6 +1973,9 @@ func (r *interpreterRuntime) newAddPublicKeyFunction(
 
 			inter := invocation.Interpreter
 
+			fmt.Print("before emitAccountEvent: ")
+			invocation.Interpreter.OnInvokedFunctionReturn(invocation.Interpreter, 0)
+
 			r.emitAccountEvent(
 				stdlib.AccountKeyAddedEventType,
 				runtimeInterface,
@@ -1972,6 +1984,9 @@ func (r *interpreterRuntime) newAddPublicKeyFunction(
 					newExportableValue(publicKeyValue, inter),
 				},
 			)
+
+			fmt.Print("after emitAccountEvent: ")
+			invocation.Interpreter.OnInvokedFunctionReturn(invocation.Interpreter, 0)
 
 			return interpreter.VoidValue{}
 		},

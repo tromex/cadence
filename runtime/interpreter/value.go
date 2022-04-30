@@ -1203,14 +1203,16 @@ var ByteArrayStaticType = ConvertSemaArrayTypeToStaticArrayType(nil, sema.ByteAr
 // DecodeHex hex-decodes this string and returns an array of UInt8 values
 //
 func (v *StringValue) DecodeHex(interpreter *Interpreter) *ArrayValue {
+	PrintMemoryUsage(interpreter, "before DecodeString: ")
 	bs, err := hex.DecodeString(v.Str)
 	if err != nil {
 		panic(err)
 	}
 
 	i := 0
+	PrintMemoryUsage(interpreter, "before NewArrayValueWithIterator: ")
 
-	return NewArrayValueWithIterator(
+	value:= NewArrayValueWithIterator(
 		interpreter,
 		ByteArrayStaticType,
 		common.Address{},
@@ -1231,6 +1233,10 @@ func (v *StringValue) DecodeHex(interpreter *Interpreter) *ArrayValue {
 			return value
 		},
 	)
+
+	PrintMemoryUsage(interpreter, "after NewArrayValueWithIterator: ")
+
+	return value
 }
 
 func (v *StringValue) ConformsToStaticType(
@@ -1321,6 +1327,8 @@ func NewArrayValueWithIterator(
 		}()
 	}
 
+	PrintMemoryUsage(interpreter, "before NewArrayFromBatchData: ")
+
 	array, err := atree.NewArrayFromBatchData(
 		interpreter.Storage,
 		atree.Address(address),
@@ -1329,11 +1337,16 @@ func NewArrayValueWithIterator(
 			return values(), nil
 		},
 	)
+
+	PrintMemoryUsage(interpreter, "before newArrayValueFromAtreeValue: ")
+
 	if err != nil {
 		panic(ExternalError{err})
 	}
 	// must assign to v here for tracing to work properly
 	v = newArrayValueFromAtreeValue(interpreter, array, arrayType)
+
+	PrintMemoryUsage(interpreter, "after newArrayValueFromAtreeValue: ")
 	return v
 }
 
@@ -13893,8 +13906,7 @@ func NewCompositeValue(
 		}()
 	}
 
-	//fmt.Print("before atree.NewMap(): ")
-	//interpreter.onInvokedFunctionReturn(interpreter, 0)
+	PrintMemoryUsage(interpreter, "before atree.NewMap(): ")
 
 	dictionary, err := atree.NewMap(
 		interpreter.Storage,
@@ -13910,20 +13922,17 @@ func NewCompositeValue(
 		panic(ExternalError{err})
 	}
 
-	//fmt.Print("after atree.NewMap(): ")
-	//interpreter.onInvokedFunctionReturn(interpreter, 0)
+	PrintMemoryUsage(interpreter, "after atree.NewMap(): ")
 
 	typeInfo := compositeTypeInfo{
 		location, qualifiedIdentifier, kind,
 	}
 
-	//fmt.Print("before newCompositeValueFromOrderedMap: ")
-	//interpreter.onInvokedFunctionReturn(interpreter, 0)
+	PrintMemoryUsage(interpreter, "before newCompositeValueFromOrderedMap: ")
 
 	v = newCompositeValueFromOrderedMap(interpreter, dictionary, typeInfo)
 
-	//fmt.Print("after newCompositeValueFromOrderedMap: ")
-	//interpreter.onInvokedFunctionReturn(interpreter, 0)
+	PrintMemoryUsage(interpreter, "after newCompositeValueFromOrderedMap: ")
 
 	for _, field := range fields {
 		v.SetMember(
@@ -13935,10 +13944,18 @@ func NewCompositeValue(
 		)
 	}
 
-	//fmt.Print("after inserting fields: ")
-	//interpreter.onInvokedFunctionReturn(interpreter, 0)
+	PrintMemoryUsage(interpreter, "after inserting fields: ")
 
 	return v
+}
+
+func PrintMemoryUsage(interpreter *Interpreter, message string) {
+	if interpreter.OnInvokedFunctionReturn == nil {
+		return
+	}
+
+	fmt.Print(message)
+	interpreter.OnInvokedFunctionReturn(interpreter, 0)
 }
 
 func newCompositeValueFromOrderedMap(
@@ -14268,9 +14285,13 @@ func (v *CompositeValue) SetMember(
 	name string,
 	value Value,
 ) {
+	PrintMemoryUsage(interpreter, "before checkInvalidatedResourceUse: ")
+
 	if interpreter.invalidatedResourceValidationEnabled {
 		v.checkInvalidatedResourceUse(getLocationRange)
 	}
+
+	PrintMemoryUsage(interpreter, "after checkInvalidatedResourceUse: ")
 
 	if interpreter.tracingEnabled {
 		startTime := time.Now()
@@ -14292,6 +14313,8 @@ func (v *CompositeValue) SetMember(
 
 	address := v.StorageID().Address
 
+	PrintMemoryUsage(interpreter, "before  Transfer: ")
+
 	value = value.Transfer(
 		interpreter,
 		getLocationRange,
@@ -14300,16 +14323,23 @@ func (v *CompositeValue) SetMember(
 		nil,
 	)
 
+	PrintMemoryUsage(interpreter, "after  Transfer: ")
+
 	existingStorable, err := v.dictionary.Set(
 		StringAtreeComparator,
 		StringAtreeHashInput,
 		NewStringAtreeValue(interpreter, name),
 		value,
 	)
+
+	PrintMemoryUsage(interpreter, "after dictionary.Set: ")
+
 	if err != nil {
 		panic(ExternalError{err})
 	}
 	interpreter.maybeValidateAtreeValue(v.dictionary)
+
+	PrintMemoryUsage(interpreter, "after maybeValidateAtreeValue: ")
 
 	if existingStorable != nil {
 		existingValue := StoredValue(interpreter, existingStorable, interpreter.Storage)

@@ -20,6 +20,8 @@ package runtime
 
 import (
 	"fmt"
+	"github.com/onflow/cadence/runtime/interpreter"
+	"runtime"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -198,4 +200,96 @@ func TestInterpreterElaborationImportMetering(t *testing.T) {
 			assert.Equal(t, uint64(3*imports+4), meter.getMemory(common.MemoryKindElaboration))
 		})
 	}
+}
+
+func TestAuthAccountMetering(t *testing.T) {
+
+	t.Parallel()
+
+	t.Run("add keys", func(t *testing.T) {
+		t.Parallel()
+
+		var m runtime.MemStats
+		var startMem uint64
+
+		mRef := &m
+
+		funcInvocHandler := interpreter.WithOnFunctionInvocationHandler(func(_ *interpreter.Interpreter, _ int) {
+			//meter.meter = make(map[common.MemoryKind]uint64)
+			runtime.ReadMemStats(mRef)
+			startMem = m.TotalAlloc
+		})
+
+		funcReturnHandler := interpreter.WithOnInvokedFunctionReturnHandler(func(_ *interpreter.Interpreter, _ int) {
+			//fmt.Println(meter.meter)
+			runtime.ReadMemStats(mRef)
+			fmt.Println(m.TotalAlloc - startMem)
+		})
+
+		rt := newTestInterpreterRuntime()
+
+		script := []byte(`
+            transaction {
+                prepare(signer: AuthAccount) {
+                    signer.addPublicKey("f847b84000fb479cb398ab7e31d6f048c12ec5b5b679052589280cacde421af823f93fe927dfc3d1e371b172f97ceeac1bc235f60654184c83f4ea70dd3b7785ffb3c73802038203e8".decodeHex())
+                }
+            }
+        `)
+
+		runtimeInterface := &testRuntimeInterface{
+			getAccountContractNames: func(_ Address) ([]string, error) {
+				return []string{"foo", "bar"}, nil
+			},
+			storage: newTestLedger(nil, nil),
+			getSigningAccounts: func() ([]Address, error) {
+				return []Address{{42}}, nil
+			},
+			createAccount: func(payer Address) (address Address, err error) {
+				return Address{42}, nil
+			},
+			addAccountKey: func(address Address, publicKey *PublicKey, hashAlgo HashAlgorithm, weight int) (*AccountKey, error) {
+				return &AccountKey{
+					KeyIndex:  0,
+					PublicKey: publicKey,
+					HashAlgo:  hashAlgo,
+					Weight:    weight,
+					IsRevoked: false,
+				}, nil
+			},
+			addEncodedAccountKey: func(address Address, publicKey []byte) error {
+				return nil
+			},
+
+			getAccountKey: func(address Address, index int) (*AccountKey, error) {
+				return nil, nil
+			},
+			removeAccountKey: func(address Address, index int) (*AccountKey, error) {
+				return nil, nil
+			},
+			log: func(message string) {
+			},
+			emitEvent: func(event cadence.Event) error {
+				return nil
+			},
+			meterMemory: func(_ common.MemoryUsage) error {
+				return nil
+			},
+		}
+
+		nextTransactionLocation := newTransactionLocationGenerator()
+
+		err := rt.ExecuteTransaction(
+			Script{
+				Source: script,
+			},
+			Context{
+				Interface: runtimeInterface,
+				Location:  nextTransactionLocation(),
+			},
+			funcInvocHandler,
+			funcReturnHandler,
+		)
+
+		require.NoError(t, err)
+	})
 }

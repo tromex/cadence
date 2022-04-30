@@ -8916,19 +8916,16 @@ func TestNewAtreeMemoryUsage(t *testing.T) {
 
 	runtime.ReadMemStats(&m)
 	fmt.Printf("Alloc = %v B", m.TotalAlloc-startMem)
-
-	//fmt.Println(unsafe.Sizeof(func(value *interpreter.CompositeValue, seenReferences interpreter.SeenReferences) string { return "" }))
-	//
-	//fmt.Println(common.NewAtreeMemoryUsage(0, 0, false))
 }
 
 func TestStructCreate(t *testing.T) {
 	script := `
             pub fun main() {
-                var z = Foo()
+                var z <- create Foo()
+				destroy z
             }
 
-            pub struct Foo {
+            pub resource Foo {
                 init() {}
             }
         `
@@ -8954,6 +8951,88 @@ func TestStructCreate(t *testing.T) {
 					fmt.Println(m.TotalAlloc - startMem)
 				}),
 				interpreter.WithTracingEnabled(false),
+				interpreter.WithAtreeValueValidationEnabled(false),
+				interpreter.WithAtreeStorageValidationEnabled(false),
+			},
+		},
+		meter)
+
+	_, err := inter.Invoke("main")
+	assert.NoError(t, err)
+}
+
+func TestArrayCreate(t *testing.T) {
+	script := `
+            pub fun main() {
+                var a: [Int] = []
+            }
+        `
+
+	meter := newTestMemoryGauge()
+
+	var m runtime.MemStats
+	var startMem uint64
+
+	var lastMem uint64
+
+	mRef := &m
+
+	inter, _ := parseCheckAndInterpretWithOptionsAndMemoryMetering(t, script,
+		ParseCheckAndInterpretOptions{
+			Options: []interpreter.Option{
+				interpreter.WithOnFunctionInvocationHandler(func(_ *interpreter.Interpreter, _ int) {
+					//meter.meter = make(map[common.MemoryKind]uint64)
+					runtime.ReadMemStats(mRef)
+					startMem = m.TotalAlloc
+				}),
+				interpreter.WithOnInvokedFunctionReturnHandler(func(_ *interpreter.Interpreter, _ int) {
+					//fmt.Println(meter.meter)
+					runtime.ReadMemStats(mRef)
+					fmt.Println(m.TotalAlloc-startMem, "diff:", m.TotalAlloc-lastMem)
+					lastMem = m.TotalAlloc
+				}),
+
+				interpreter.WithTracingEnabled(false),
+				interpreter.WithAtreeValueValidationEnabled(false),
+				interpreter.WithAtreeStorageValidationEnabled(false),
+			},
+		},
+		meter)
+
+	_, err := inter.Invoke("main")
+	assert.NoError(t, err)
+}
+
+func TestDecodeHex(t *testing.T) {
+	script := `
+            pub fun main() {
+                let x = "f847b84000fb479cb398ab7e31d6f048c12ec5b5b679052589280cacde421af823f93fe927dfc3d1e371b172f97ceeac1bc235f60654184c83f4ea70dd3b7785ffb3c73802038203e8".decodeHex()
+            }
+        `
+
+	meter := newTestMemoryGauge()
+
+	var m runtime.MemStats
+	var startMem uint64
+
+	mRef := &m
+
+	inter, _ := parseCheckAndInterpretWithOptionsAndMemoryMetering(t, script,
+		ParseCheckAndInterpretOptions{
+			Options: []interpreter.Option{
+				interpreter.WithOnFunctionInvocationHandler(func(_ *interpreter.Interpreter, _ int) {
+					//meter.meter = make(map[common.MemoryKind]uint64)
+					runtime.ReadMemStats(mRef)
+					startMem = m.TotalAlloc
+				}),
+				interpreter.WithOnInvokedFunctionReturnHandler(func(_ *interpreter.Interpreter, _ int) {
+					//fmt.Println(meter.meter)
+					runtime.ReadMemStats(mRef)
+					fmt.Println(m.TotalAlloc - startMem)
+				}),
+				interpreter.WithTracingEnabled(false),
+				interpreter.WithAtreeValueValidationEnabled(false),
+				interpreter.WithAtreeStorageValidationEnabled(false),
 			},
 		},
 		meter)
@@ -8977,7 +9056,6 @@ func (a *VariableActivation) Set(name string, value *interpreter.Variable) {
 	a.entries[name] = value
 }
 
-
 func TestMapMake(t *testing.T) {
 
 	a := &VariableActivation{}
@@ -8991,229 +9069,3 @@ func TestMapMake(t *testing.T) {
 	runtime.ReadMemStats(&m)
 	fmt.Println(fmt.Sprintf("ReturnStatement alloc = %v B", m.TotalAlloc-startMem))
 }
-
-func TestVisitor(t *testing.T) {
-	stmt := &ast.ReturnStatement{
-		Expression: &ast.BinaryExpression{
-			Operation: ast.OperationEqual,
-			Left:      &ast.BoolExpression{},
-			Right:     &ast.BoolExpression{},
-		},
-	}
-
-	v := &testVisitor{}
-
-	stmt.Accept(v)
-}
-
-type testVisitor struct {
-}
-
-var strct = &interpreter.CompositeValue{}
-
-func createStruct() interpreter.Value {
-	return strct
-}
-
-func (t *testVisitor) evalExpression(expression ast.Expression) interpreter.Value {
-	return expression.Accept(t).(interpreter.Value)
-}
-
-func (t *testVisitor) VisitReturnStatement(statement *ast.ReturnStatement) ast.Repr {
-	var m runtime.MemStats
-	runtime.ReadMemStats(&m)
-	startMem := m.TotalAlloc
-
-	defer func() {
-		runtime.ReadMemStats(&m)
-		fmt.Println(fmt.Sprintf("ReturnStatement alloc = %v B", m.TotalAlloc-startMem))
-	}()
-
-	t.evalExpression(statement.Expression)
-
-	return nil
-}
-
-func (t *testVisitor) VisitBinaryExpression(expression *ast.BinaryExpression) ast.Repr {
-	t.evalExpression(expression.Left)
-	v := t.evalExpression(expression.Right)
-
-	return v
-}
-
-func (t *testVisitor) VisitBoolExpression(expression *ast.BoolExpression) ast.Repr {
-	//var m runtime.MemStats
-	//runtime.ReadMemStats(&m)
-	//startMem := m.TotalAlloc
-	//
-	//runtime.ReadMemStats(&m)
-	//fmt.Println(fmt.Sprintf("BoolExpression alloc = %v B", m.TotalAlloc-startMem))
-
-	return createStruct()
-}
-
-func (t *testVisitor) VisitBreakStatement(statement *ast.BreakStatement) ast.Repr {
-	panic("implement me")
-}
-
-func (t *testVisitor) VisitContinueStatement(statement *ast.ContinueStatement) ast.Repr {
-	panic("implement me")
-}
-
-func (t *testVisitor) VisitIfStatement(statement *ast.IfStatement) ast.Repr {
-	panic("implement me")
-}
-
-func (t *testVisitor) VisitSwitchStatement(statement *ast.SwitchStatement) ast.Repr {
-	panic("implement me")
-}
-
-func (t *testVisitor) VisitWhileStatement(statement *ast.WhileStatement) ast.Repr {
-	panic("implement me")
-}
-
-func (t *testVisitor) VisitForStatement(statement *ast.ForStatement) ast.Repr {
-	panic("implement me")
-}
-
-func (t *testVisitor) VisitEmitStatement(statement *ast.EmitStatement) ast.Repr {
-	panic("implement me")
-}
-
-func (t *testVisitor) VisitVariableDeclaration(declaration *ast.VariableDeclaration) ast.Repr {
-	panic("implement me")
-}
-
-func (t *testVisitor) VisitAssignmentStatement(statement *ast.AssignmentStatement) ast.Repr {
-	panic("implement me")
-}
-
-func (t *testVisitor) VisitSwapStatement(statement *ast.SwapStatement) ast.Repr {
-	panic("implement me")
-}
-
-func (t *testVisitor) VisitExpressionStatement(statement *ast.ExpressionStatement) ast.Repr {
-	panic("implement me")
-}
-
-func (t *testVisitor) VisitNilExpression(expression *ast.NilExpression) ast.Repr {
-	panic("implement me")
-}
-
-func (t *testVisitor) VisitIntegerExpression(expression *ast.IntegerExpression) ast.Repr {
-	panic("implement me")
-}
-
-func (t *testVisitor) VisitFixedPointExpression(expression *ast.FixedPointExpression) ast.Repr {
-	panic("implement me")
-}
-
-func (t *testVisitor) VisitArrayExpression(expression *ast.ArrayExpression) ast.Repr {
-	panic("implement me")
-}
-
-func (t *testVisitor) VisitDictionaryExpression(expression *ast.DictionaryExpression) ast.Repr {
-	panic("implement me")
-}
-
-func (t *testVisitor) VisitIdentifierExpression(expression *ast.IdentifierExpression) ast.Repr {
-	panic("implement me")
-}
-
-func (t *testVisitor) VisitInvocationExpression(expression *ast.InvocationExpression) ast.Repr {
-	panic("implement me")
-}
-
-func (t *testVisitor) VisitMemberExpression(expression *ast.MemberExpression) ast.Repr {
-	panic("implement me")
-}
-
-func (t *testVisitor) VisitIndexExpression(expression *ast.IndexExpression) ast.Repr {
-	panic("implement me")
-}
-
-func (t *testVisitor) VisitConditionalExpression(expression *ast.ConditionalExpression) ast.Repr {
-	panic("implement me")
-}
-
-func (t *testVisitor) VisitUnaryExpression(expression *ast.UnaryExpression) ast.Repr {
-	panic("implement me")
-}
-
-func (t *testVisitor) VisitFunctionExpression(expression *ast.FunctionExpression) ast.Repr {
-	panic("implement me")
-}
-
-func (t *testVisitor) VisitStringExpression(expression *ast.StringExpression) ast.Repr {
-	panic("implement me")
-}
-
-func (t *testVisitor) VisitCastingExpression(expression *ast.CastingExpression) ast.Repr {
-	panic("implement me")
-}
-
-func (t *testVisitor) VisitCreateExpression(expression *ast.CreateExpression) ast.Repr {
-	panic("implement me")
-}
-
-func (t *testVisitor) VisitDestroyExpression(expression *ast.DestroyExpression) ast.Repr {
-	panic("implement me")
-}
-
-func (t *testVisitor) VisitReferenceExpression(expression *ast.ReferenceExpression) ast.Repr {
-	panic("implement me")
-}
-
-func (t *testVisitor) VisitForceExpression(expression *ast.ForceExpression) ast.Repr {
-	panic("implement me")
-}
-
-func (t *testVisitor) VisitPathExpression(expression *ast.PathExpression) ast.Repr {
-	panic("implement me")
-}
-
-func (t *testVisitor) VisitProgram(program *ast.Program) ast.Repr {
-	panic("implement me")
-}
-
-func (t *testVisitor) VisitFunctionDeclaration(declaration *ast.FunctionDeclaration) ast.Repr {
-	panic("implement me")
-}
-
-func (t *testVisitor) VisitBlock(block *ast.Block) ast.Repr {
-	panic("implement me")
-}
-
-func (t *testVisitor) VisitFunctionBlock(block *ast.FunctionBlock) ast.Repr {
-	panic("implement me")
-}
-
-func (t *testVisitor) VisitCompositeDeclaration(declaration *ast.CompositeDeclaration) ast.Repr {
-	panic("implement me")
-}
-
-func (t *testVisitor) VisitInterfaceDeclaration(declaration *ast.InterfaceDeclaration) ast.Repr {
-	panic("implement me")
-}
-
-func (t *testVisitor) VisitFieldDeclaration(declaration *ast.FieldDeclaration) ast.Repr {
-	panic("implement me")
-}
-
-func (t *testVisitor) VisitEnumCaseDeclaration(declaration *ast.EnumCaseDeclaration) ast.Repr {
-	panic("implement me")
-}
-
-func (t *testVisitor) VisitPragmaDeclaration(declaration *ast.PragmaDeclaration) ast.Repr {
-	panic("implement me")
-}
-
-func (t *testVisitor) VisitImportDeclaration(declaration *ast.ImportDeclaration) ast.Repr {
-	panic("implement me")
-}
-
-func (t *testVisitor) VisitTransactionDeclaration(declaration *ast.TransactionDeclaration) ast.Repr {
-	panic("implement me")
-}
-
-var _ ast.Visitor = &testVisitor{}

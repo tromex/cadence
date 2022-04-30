@@ -115,9 +115,8 @@ func (interpreter *Interpreter) invokeInterpretedFunction(
 	invocation Invocation,
 ) Value {
 
-
 	fmt.Print("before activation start: ")
-	interpreter.onInvokedFunctionReturn(interpreter, 0)
+	interpreter.OnInvokedFunctionReturn(interpreter, 0)
 
 	// Start a new activation record.
 	// Lexical scope: use the function declaration's activation record,
@@ -126,17 +125,16 @@ func (interpreter *Interpreter) invokeInterpretedFunction(
 	interpreter.activations.Current().isFunction = true
 
 	fmt.Print("before var decl: ")
-	interpreter.onInvokedFunctionReturn(interpreter, 0)
+	interpreter.OnInvokedFunctionReturn(interpreter, 0)
 
 	// Make `self` available, if any
 	if invocation.Self != nil {
 		interpreter.declareVariable(sema.SelfIdentifier, invocation.Self)
 	}
 
-
 	defer func() {
 		fmt.Print("after invokeInterpretedFunctionActivated: ")
-		interpreter.onInvokedFunctionReturn(interpreter, 0)
+		interpreter.OnInvokedFunctionReturn(interpreter, 0)
 	}()
 	return interpreter.invokeInterpretedFunctionActivated(function, invocation.Arguments)
 }
@@ -154,17 +152,24 @@ func (interpreter *Interpreter) invokeInterpretedFunctionActivated(
 	}
 
 	fmt.Print("before func body: ")
-	interpreter.onInvokedFunctionReturn(interpreter, 0)
+	interpreter.OnInvokedFunctionReturn(interpreter, 0)
 
 	defer func() {
 		fmt.Print("after func body(): ")
-		interpreter.onInvokedFunctionReturn(interpreter, 0)
+		interpreter.OnInvokedFunctionReturn(interpreter, 0)
 	}()
 	return interpreter.visitFunctionBody(
 		function.BeforeStatements,
 		function.PreConditions,
 		func() controlReturn {
+			fmt.Print("before visit statements: ")
+			interpreter.OnInvokedFunctionReturn(interpreter, 0)
+			defer func() {
+				fmt.Print("after visit statements ")
+				interpreter.OnInvokedFunctionReturn(interpreter, 0)
+			}()
 			return interpreter.visitStatements(function.Statements)
+
 		},
 		function.PostConditions,
 		function.Type.ReturnTypeAnnotation.Type,

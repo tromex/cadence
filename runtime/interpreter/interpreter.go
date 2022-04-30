@@ -336,7 +336,7 @@ type Interpreter struct {
 	onStatement                    OnStatementFunc
 	onLoopIteration                OnLoopIterationFunc
 	onFunctionInvocation           OnFunctionInvocationFunc
-	onInvokedFunctionReturn        OnInvokedFunctionReturnFunc
+	OnInvokedFunctionReturn        OnInvokedFunctionReturnFunc
 	onRecordTrace                  OnRecordTraceFunc
 	onResourceOwnerChange          OnResourceOwnerChangeFunc
 	onMeterComputation             OnMeterComputationFunc
@@ -678,7 +678,7 @@ func WithDebugger(debugger *Debugger) Option {
 // Create a base-activation so that it can be reused across all interpreters.
 //
 var baseActivation = func() *VariableActivation {
-	activation := NewVariableActivation(nil)
+	activation := NewVariableActivation(nil, nil)
 	defineBaseFunctions(activation)
 	return activation
 }()
@@ -688,11 +688,12 @@ func NewInterpreter(program *Program, location common.Location, options ...Optio
 	interpreter := &Interpreter{
 		Program:                    program,
 		Location:                   location,
-		activations:                &VariableActivations{},
 		Globals:                    map[string]*Variable{},
 		effectivePredeclaredValues: map[string]ValueDeclaration{},
 		resourceVariables:          map[ResourceKindedValue]*Variable{},
 	}
+
+	interpreter.activations = NewVariableActivations(interpreter)
 
 	// Start a new activation/scope for the current program.
 	// Use the base activation as the parent.
@@ -753,7 +754,7 @@ func (interpreter *Interpreter) SetOnFunctionInvocationHandler(function OnFuncti
 // SetOnInvokedFunctionReturnHandler sets the function that is triggered when an invoked function returned.
 //
 func (interpreter *Interpreter) SetOnInvokedFunctionReturnHandler(function OnInvokedFunctionReturnFunc) {
-	interpreter.onInvokedFunctionReturn = function
+	interpreter.OnInvokedFunctionReturn = function
 }
 
 // SetMemoryGauge sets the object as the memory gauge.
@@ -1428,25 +1429,25 @@ func (interpreter *Interpreter) declareValue(declaration ValueDeclaration) *Vari
 
 // declareVariable declares a variable in the latest scope
 func (interpreter *Interpreter) declareVariable(identifier string, value Value) *Variable {
-	fmt.Print("before NewVariableWithValue: ")
-	interpreter.onInvokedFunctionReturn(interpreter, 0)
+	//fmt.Print("before NewVariableWithValue: ")
+	//interpreter.OnInvokedFunctionReturn(interpreter, 0)
 
 	// NOTE: semantic analysis already checked possible invalid redeclaration
 	variable := NewVariableWithValue(interpreter, value)
 
-	fmt.Print("after NewVariableWithValue: ")
-	interpreter.onInvokedFunctionReturn(interpreter, 0)
+	//fmt.Print("after NewVariableWithValue: ")
+	//interpreter.OnInvokedFunctionReturn(interpreter, 0)
 
 	interpreter.setVariable(identifier, variable)
 
-	fmt.Print("before startResourceTracking: ")
-	interpreter.onInvokedFunctionReturn(interpreter, 0)
+	//fmt.Print("before startResourceTracking: ")
+	//interpreter.OnInvokedFunctionReturn(interpreter, 0)
 
 	// TODO: add proper location info
 	interpreter.startResourceTracking(value, variable, identifier, nil)
 
-	fmt.Print("after startResourceTracking: ")
-	interpreter.onInvokedFunctionReturn(interpreter, 0)
+	//fmt.Print("after startResourceTracking: ")
+	//interpreter.OnInvokedFunctionReturn(interpreter, 0)
 
 	return variable
 }
@@ -1703,7 +1704,7 @@ func (interpreter *Interpreter) declareNonEnumCompositeValue(
 			interpreter,
 			func(invocation Invocation) Value {
 
-				interpreter.onInvokedFunctionReturn(interpreter, 0)
+				interpreter.OnInvokedFunctionReturn(interpreter, 0)
 
 				// Check that the resource is constructed
 				// in the same location as it was declared
@@ -1728,7 +1729,7 @@ func (interpreter *Interpreter) declareNonEnumCompositeValue(
 					)
 				}
 
-				interpreter.onInvokedFunctionReturn(interpreter, 0)
+				interpreter.OnInvokedFunctionReturn(interpreter, 0)
 
 				var fields []CompositeField
 
@@ -1760,7 +1761,7 @@ func (interpreter *Interpreter) declareNonEnumCompositeValue(
 				}
 
 				fmt.Print("before NewCompositeValue(): ")
-				interpreter.onInvokedFunctionReturn(interpreter, 0)
+				interpreter.OnInvokedFunctionReturn(interpreter, 0)
 
 				value := NewCompositeValue(
 					interpreter,
@@ -1772,7 +1773,7 @@ func (interpreter *Interpreter) declareNonEnumCompositeValue(
 				)
 
 				fmt.Print("after NewCompositeValue(): ")
-				interpreter.onInvokedFunctionReturn(interpreter, 0)
+				interpreter.OnInvokedFunctionReturn(interpreter, 0)
 
 				value.InjectedFields = injectedFields
 				value.Functions = functions
@@ -1793,7 +1794,7 @@ func (interpreter *Interpreter) declareNonEnumCompositeValue(
 				}
 
 				fmt.Print("before initializer(): ")
-				interpreter.onInvokedFunctionReturn(interpreter, 0)
+				interpreter.OnInvokedFunctionReturn(interpreter, 0)
 
 				if initializerFunction != nil {
 					// NOTE: arguments are already properly boxed by invocation expression
@@ -1802,7 +1803,7 @@ func (interpreter *Interpreter) declareNonEnumCompositeValue(
 				}
 
 				fmt.Print("after initializer(): ")
-				interpreter.onInvokedFunctionReturn(interpreter, 0)
+				interpreter.OnInvokedFunctionReturn(interpreter, 0)
 
 				return value
 			},
@@ -2658,7 +2659,7 @@ func (interpreter *Interpreter) NewSubInterpreter(
 		WithOnStatementHandler(interpreter.onStatement),
 		WithOnLoopIterationHandler(interpreter.onLoopIteration),
 		WithOnFunctionInvocationHandler(interpreter.onFunctionInvocation),
-		WithOnInvokedFunctionReturnHandler(interpreter.onInvokedFunctionReturn),
+		WithOnInvokedFunctionReturnHandler(interpreter.OnInvokedFunctionReturn),
 		WithInjectedCompositeFieldsHandler(interpreter.injectedCompositeFieldsHandler),
 		WithContractValueHandler(interpreter.contractValueHandler),
 		WithImportLocationHandler(interpreter.importLocationHandler),
@@ -4272,11 +4273,11 @@ func (interpreter *Interpreter) reportFunctionInvocation(line int) {
 }
 
 func (interpreter *Interpreter) reportInvokedFunctionReturn(line int) {
-	if interpreter.onInvokedFunctionReturn == nil {
+	if interpreter.OnInvokedFunctionReturn == nil {
 		return
 	}
 
-	interpreter.onInvokedFunctionReturn(interpreter, line)
+	interpreter.OnInvokedFunctionReturn(interpreter, line)
 }
 
 func (interpreter *Interpreter) ReportComputation(compKind common.ComputationKind, intensity uint) {
