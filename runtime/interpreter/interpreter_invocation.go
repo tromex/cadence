@@ -19,6 +19,7 @@
 package interpreter
 
 import (
+	"fmt"
 	"github.com/onflow/atree"
 
 	"github.com/onflow/cadence/runtime/ast"
@@ -114,17 +115,29 @@ func (interpreter *Interpreter) invokeInterpretedFunction(
 	invocation Invocation,
 ) Value {
 
+
+	fmt.Print("before activation start: ")
+	interpreter.onInvokedFunctionReturn(interpreter, 0)
+
 	// Start a new activation record.
 	// Lexical scope: use the function declaration's activation record,
 	// not the current one (which would be dynamic scope)
 	interpreter.activations.PushNewWithParent(function.Activation)
 	interpreter.activations.Current().isFunction = true
 
+	fmt.Print("before var decl: ")
+	interpreter.onInvokedFunctionReturn(interpreter, 0)
+
 	// Make `self` available, if any
 	if invocation.Self != nil {
 		interpreter.declareVariable(sema.SelfIdentifier, invocation.Self)
 	}
 
+
+	defer func() {
+		fmt.Print("after invokeInterpretedFunctionActivated: ")
+		interpreter.onInvokedFunctionReturn(interpreter, 0)
+	}()
 	return interpreter.invokeInterpretedFunctionActivated(function, invocation.Arguments)
 }
 
@@ -140,6 +153,13 @@ func (interpreter *Interpreter) invokeInterpretedFunctionActivated(
 		interpreter.bindParameterArguments(function.ParameterList, arguments)
 	}
 
+	fmt.Print("before func body: ")
+	interpreter.onInvokedFunctionReturn(interpreter, 0)
+
+	defer func() {
+		fmt.Print("after func body(): ")
+		interpreter.onInvokedFunctionReturn(interpreter, 0)
+	}()
 	return interpreter.visitFunctionBody(
 		function.BeforeStatements,
 		function.PreConditions,

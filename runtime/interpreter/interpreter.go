@@ -1428,12 +1428,25 @@ func (interpreter *Interpreter) declareValue(declaration ValueDeclaration) *Vari
 
 // declareVariable declares a variable in the latest scope
 func (interpreter *Interpreter) declareVariable(identifier string, value Value) *Variable {
+	fmt.Print("before NewVariableWithValue: ")
+	interpreter.onInvokedFunctionReturn(interpreter, 0)
+
 	// NOTE: semantic analysis already checked possible invalid redeclaration
 	variable := NewVariableWithValue(interpreter, value)
+
+	fmt.Print("after NewVariableWithValue: ")
+	interpreter.onInvokedFunctionReturn(interpreter, 0)
+
 	interpreter.setVariable(identifier, variable)
+
+	fmt.Print("before startResourceTracking: ")
+	interpreter.onInvokedFunctionReturn(interpreter, 0)
 
 	// TODO: add proper location info
 	interpreter.startResourceTracking(value, variable, identifier, nil)
+
+	fmt.Print("after startResourceTracking: ")
+	interpreter.onInvokedFunctionReturn(interpreter, 0)
 
 	return variable
 }
@@ -1690,6 +1703,8 @@ func (interpreter *Interpreter) declareNonEnumCompositeValue(
 			interpreter,
 			func(invocation Invocation) Value {
 
+				interpreter.onInvokedFunctionReturn(interpreter, 0)
+
 				// Check that the resource is constructed
 				// in the same location as it was declared
 
@@ -1712,6 +1727,8 @@ func (interpreter *Interpreter) declareNonEnumCompositeValue(
 						declaration.CompositeKind,
 					)
 				}
+
+				interpreter.onInvokedFunctionReturn(interpreter, 0)
 
 				var fields []CompositeField
 
@@ -1742,6 +1759,9 @@ func (interpreter *Interpreter) declareNonEnumCompositeValue(
 					)
 				}
 
+				fmt.Print("before NewCompositeValue(): ")
+				interpreter.onInvokedFunctionReturn(interpreter, 0)
+
 				value := NewCompositeValue(
 					interpreter,
 					location,
@@ -1750,6 +1770,9 @@ func (interpreter *Interpreter) declareNonEnumCompositeValue(
 					fields,
 					address,
 				)
+
+				fmt.Print("after NewCompositeValue(): ")
+				interpreter.onInvokedFunctionReturn(interpreter, 0)
 
 				value.InjectedFields = injectedFields
 				value.Functions = functions
@@ -1769,11 +1792,18 @@ func (interpreter *Interpreter) declareNonEnumCompositeValue(
 					value.NestedVariables = nestedVariables
 				}
 
+				fmt.Print("before initializer(): ")
+				interpreter.onInvokedFunctionReturn(interpreter, 0)
+
 				if initializerFunction != nil {
 					// NOTE: arguments are already properly boxed by invocation expression
 
 					_ = initializerFunction.invoke(invocation)
 				}
+
+				fmt.Print("after initializer(): ")
+				interpreter.onInvokedFunctionReturn(interpreter, 0)
+
 				return value
 			},
 			constructorType,

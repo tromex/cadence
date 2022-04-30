@@ -13893,6 +13893,9 @@ func NewCompositeValue(
 		}()
 	}
 
+	//fmt.Print("before atree.NewMap(): ")
+	//interpreter.onInvokedFunctionReturn(interpreter, 0)
+
 	dictionary, err := atree.NewMap(
 		interpreter.Storage,
 		atree.Address(address),
@@ -13907,11 +13910,20 @@ func NewCompositeValue(
 		panic(ExternalError{err})
 	}
 
+	//fmt.Print("after atree.NewMap(): ")
+	//interpreter.onInvokedFunctionReturn(interpreter, 0)
+
 	typeInfo := compositeTypeInfo{
 		location, qualifiedIdentifier, kind,
 	}
 
+	//fmt.Print("before newCompositeValueFromOrderedMap: ")
+	//interpreter.onInvokedFunctionReturn(interpreter, 0)
+
 	v = newCompositeValueFromOrderedMap(interpreter, dictionary, typeInfo)
+
+	//fmt.Print("after newCompositeValueFromOrderedMap: ")
+	//interpreter.onInvokedFunctionReturn(interpreter, 0)
 
 	for _, field := range fields {
 		v.SetMember(
@@ -13922,6 +13934,9 @@ func NewCompositeValue(
 			field.Value,
 		)
 	}
+
+	//fmt.Print("after inserting fields: ")
+	//interpreter.onInvokedFunctionReturn(interpreter, 0)
 
 	return v
 }
