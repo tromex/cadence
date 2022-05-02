@@ -8918,6 +8918,37 @@ func TestNewAtreeMemoryUsage(t *testing.T) {
 	fmt.Printf("Alloc = %v B", m.TotalAlloc-startMem)
 }
 
+func TestNewAtreeArrayMemoryUsage(t *testing.T) {
+	meter := newTestMemoryGauge()
+
+	inter, _ := interpreter.NewInterpreter(
+		nil,
+		nil,
+		interpreter.WithMemoryGauge(meter),
+		interpreter.WithStorage(interpreter.NewInMemoryStorage(meter)),
+	)
+
+	address := common.Address{}
+
+	intVal := interpreter.NewIntValueFromInt64(nil, 2)
+
+	var m runtime.MemStats
+	runtime.ReadMemStats(&m)
+	startMem := m.TotalAlloc
+
+	_ = interpreter.NewArrayValue(
+		inter,
+		interpreter.VariableSizedStaticType{
+			Type: interpreter.PrimitiveStaticTypeInt,
+		},
+		address,
+		intVal,
+	)
+
+	runtime.ReadMemStats(&m)
+	fmt.Printf("Alloc = %v B", m.TotalAlloc-startMem)
+}
+
 func TestStructCreate(t *testing.T) {
 	script := `
             pub fun main() {
