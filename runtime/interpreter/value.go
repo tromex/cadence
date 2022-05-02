@@ -1204,6 +1204,9 @@ var ByteArrayStaticType = ConvertSemaArrayTypeToStaticArrayType(nil, sema.ByteAr
 //
 func (v *StringValue) DecodeHex(interpreter *Interpreter) *ArrayValue {
 	PrintMemoryUsage(interpreter, "before DecodeString: ")
+
+	common.UseMemory(interpreter.memoryGauge, common.NewBytesMemoryUsage(v.Length()))
+
 	bs, err := hex.DecodeString(v.Str)
 	if err != nil {
 		panic(err)
@@ -1212,7 +1215,7 @@ func (v *StringValue) DecodeHex(interpreter *Interpreter) *ArrayValue {
 	i := 0
 	PrintMemoryUsage(interpreter, "before NewArrayValueWithIterator: ")
 
-	value:= NewArrayValueWithIterator(
+	value := NewArrayValueWithIterator(
 		interpreter,
 		ByteArrayStaticType,
 		common.Address{},
@@ -1338,7 +1341,7 @@ func NewArrayValueWithIterator(
 		},
 	)
 
-	PrintMemoryUsage(interpreter, "before newArrayValueFromAtreeValue: ")
+	PrintMemoryUsage(interpreter, "after NewArrayFromBatchData: ")
 
 	if err != nil {
 		panic(ExternalError{err})

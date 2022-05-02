@@ -1709,6 +1709,7 @@ func (r *interpreterRuntime) emitAccountEvent(
 	runtimeInterface Interface,
 	eventFields []exportableValue,
 ) {
+
 	eventValue := exportableEvent{
 		Type:   eventType,
 		Fields: eventFields,

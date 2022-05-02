@@ -8952,11 +8952,10 @@ func TestNewAtreeArrayMemoryUsage(t *testing.T) {
 func TestStructCreate(t *testing.T) {
 	script := `
             pub fun main() {
-                var z <- create Foo()
-				destroy z
+                var z = Foo()
             }
 
-            pub resource Foo {
+            pub struct Foo {
                 init() {}
             }
         `
@@ -8965,6 +8964,7 @@ func TestStructCreate(t *testing.T) {
 
 	var m runtime.MemStats
 	var startMem uint64
+	var lastMem uint64
 
 	mRef := &m
 
@@ -8977,9 +8977,10 @@ func TestStructCreate(t *testing.T) {
 					startMem = m.TotalAlloc
 				}),
 				interpreter.WithOnInvokedFunctionReturnHandler(func(_ *interpreter.Interpreter, _ int) {
-					//fmt.Println(meter.meter)
 					runtime.ReadMemStats(mRef)
-					fmt.Println(m.TotalAlloc - startMem)
+					fmt.Println(m.TotalAlloc-startMem, "diff:", m.TotalAlloc-lastMem)
+					lastMem = m.TotalAlloc
+					//fmt.Println(meter.meter)
 				}),
 				interpreter.WithTracingEnabled(false),
 				interpreter.WithAtreeValueValidationEnabled(false),
@@ -9003,7 +9004,6 @@ func TestArrayCreate(t *testing.T) {
 
 	var m runtime.MemStats
 	var startMem uint64
-
 	var lastMem uint64
 
 	mRef := &m
@@ -9017,10 +9017,10 @@ func TestArrayCreate(t *testing.T) {
 					startMem = m.TotalAlloc
 				}),
 				interpreter.WithOnInvokedFunctionReturnHandler(func(_ *interpreter.Interpreter, _ int) {
-					//fmt.Println(meter.meter)
 					runtime.ReadMemStats(mRef)
 					fmt.Println(m.TotalAlloc-startMem, "diff:", m.TotalAlloc-lastMem)
 					lastMem = m.TotalAlloc
+					//fmt.Println(meter.meter)
 				}),
 
 				interpreter.WithTracingEnabled(false),
@@ -9087,7 +9087,7 @@ func (a *VariableActivation) Set(name string, value *interpreter.Variable) {
 	a.entries[name] = value
 }
 
-func TestMapMake(t *testing.T) {
+func TestVariableActivations(t *testing.T) {
 
 	a := &VariableActivation{}
 

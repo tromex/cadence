@@ -209,21 +209,24 @@ func TestAuthAccountMetering(t *testing.T) {
 	t.Run("add keys", func(t *testing.T) {
 		t.Parallel()
 
+		meter := newTestMemoryGauge()
 		var m runtime.MemStats
 		var startMem uint64
-
+		var lastMem uint64
 		mRef := &m
 
 		funcInvocHandler := interpreter.WithOnFunctionInvocationHandler(func(_ *interpreter.Interpreter, _ int) {
-			//meter.meter = make(map[common.MemoryKind]uint64)
+			meter.meter = make(map[common.MemoryKind]uint64)
 			runtime.ReadMemStats(mRef)
 			startMem = m.TotalAlloc
 		})
 
 		funcReturnHandler := interpreter.WithOnInvokedFunctionReturnHandler(func(_ *interpreter.Interpreter, _ int) {
-			//fmt.Println(meter.meter)
 			runtime.ReadMemStats(mRef)
-			fmt.Println(m.TotalAlloc - startMem)
+			fmt.Println(m.TotalAlloc-startMem, " | diff:", m.TotalAlloc-lastMem)
+			lastMem = m.TotalAlloc
+			fmt.Println(meter.meter)
+			fmt.Println()
 		})
 
 		rt := newTestInterpreterRuntime()
@@ -288,6 +291,7 @@ func TestAuthAccountMetering(t *testing.T) {
 			},
 			funcInvocHandler,
 			funcReturnHandler,
+			interpreter.WithMemoryGauge(meter),
 		)
 
 		require.NoError(t, err)
