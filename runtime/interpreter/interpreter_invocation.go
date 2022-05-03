@@ -19,7 +19,6 @@
 package interpreter
 
 import (
-	"fmt"
 	"github.com/onflow/atree"
 
 	"github.com/onflow/cadence/runtime/ast"
@@ -63,6 +62,8 @@ func (interpreter *Interpreter) invokeFunctionValue(
 	invocationPosition ast.HasPosition,
 ) Value {
 
+	PrintMemoryUsage(interpreter, "start of invokeFunctionValue: ")
+
 	parameterTypeCount := len(parameterTypes)
 	transferredArguments := make([]Value, len(arguments))
 
@@ -97,6 +98,8 @@ func (interpreter *Interpreter) invokeFunctionValue(
 		}
 	}
 
+	PrintMemoryUsage(interpreter, "after argument transfer: ")
+
 	getLocationRange := locationRangeGetter(interpreter, interpreter.Location, invocationPosition)
 
 	invocation := Invocation{
@@ -115,8 +118,7 @@ func (interpreter *Interpreter) invokeInterpretedFunction(
 	invocation Invocation,
 ) Value {
 
-	fmt.Print("before activation start: ")
-	interpreter.OnInvokedFunctionReturn(interpreter, 0)
+	PrintMemoryUsage(interpreter, "before activation start: ")
 
 	// Start a new activation record.
 	// Lexical scope: use the function declaration's activation record,
@@ -124,17 +126,17 @@ func (interpreter *Interpreter) invokeInterpretedFunction(
 	interpreter.activations.PushNewWithParent(function.Activation)
 	interpreter.activations.Current().isFunction = true
 
-	fmt.Print("before var decl: ")
-	interpreter.OnInvokedFunctionReturn(interpreter, 0)
+	PrintMemoryUsage(interpreter, "before var decl: ")
 
 	// Make `self` available, if any
 	if invocation.Self != nil {
 		interpreter.declareVariable(sema.SelfIdentifier, invocation.Self)
 	}
 
+	PrintMemoryUsage(interpreter, "after var decl: ")
+
 	defer func() {
-		fmt.Print("after invokeInterpretedFunctionActivated: ")
-		interpreter.OnInvokedFunctionReturn(interpreter, 0)
+		PrintMemoryUsage(interpreter, "after invokeInterpretedFunctionActivated: ")
 	}()
 	return interpreter.invokeInterpretedFunctionActivated(function, invocation.Arguments)
 }
@@ -151,22 +153,18 @@ func (interpreter *Interpreter) invokeInterpretedFunctionActivated(
 		interpreter.bindParameterArguments(function.ParameterList, arguments)
 	}
 
-	fmt.Print("before func body: ")
-	interpreter.OnInvokedFunctionReturn(interpreter, 0)
+	PrintMemoryUsage(interpreter, "before func body: ")
 
 	defer func() {
-		fmt.Print("after func body(): ")
-		interpreter.OnInvokedFunctionReturn(interpreter, 0)
+		PrintMemoryUsage(interpreter, "after func body(): ")
 	}()
 	return interpreter.visitFunctionBody(
 		function.BeforeStatements,
 		function.PreConditions,
 		func() controlReturn {
-			fmt.Print("before visit statements: ")
-			interpreter.OnInvokedFunctionReturn(interpreter, 0)
+			PrintMemoryUsage(interpreter, "before visit statements: ")
 			defer func() {
-				fmt.Print("after visit statements ")
-				interpreter.OnInvokedFunctionReturn(interpreter, 0)
+				PrintMemoryUsage(interpreter, "after visit statements ")
 			}()
 			return interpreter.visitStatements(function.Statements)
 

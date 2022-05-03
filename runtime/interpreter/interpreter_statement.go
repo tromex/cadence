@@ -78,8 +78,10 @@ func (interpreter *Interpreter) VisitReturnStatement(statement *ast.ReturnStatem
 
 		getLocationRange := locationRangeGetter(interpreter, interpreter.Location, statement.Expression)
 
+		PrintMemoryUsage(interpreter, "before transferAndConvert on return: ")
 		// NOTE: copy on return
 		value = interpreter.transferAndConvert(value, valueType, returnType, getLocationRange)
+		PrintMemoryUsage(interpreter, "after transferAndConvert on return: ")
 	}
 
 	return functionReturn{value}

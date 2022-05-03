@@ -51,7 +51,7 @@ type Runtime interface {
 	//
 	// This function returns an error if the program has errors (e.g syntax errors, type errors),
 	// or if the execution fails.
-	ExecuteScript(Script, Context) (cadence.Value, error)
+	ExecuteScript(Script, Context, ...interpreter.Option) (cadence.Value, error)
 
 	// ExecuteTransaction executes the given transaction.
 	//
@@ -265,7 +265,7 @@ func (r *interpreterRuntime) SetResourceOwnerChangeHandlerEnabled(enabled bool) 
 	r.resourceOwnerChangeHandlerEnabled = enabled
 }
 
-func (r *interpreterRuntime) ExecuteScript(script Script, context Context) (val cadence.Value, err error) {
+func (r *interpreterRuntime) ExecuteScript(script Script, context Context, interpretOptions ...interpreter.Option) (val cadence.Value, err error) {
 	defer r.Recover(
 		func(internalErr error) {
 			err = internalErr
@@ -281,6 +281,8 @@ func (r *interpreterRuntime) ExecuteScript(script Script, context Context) (val 
 
 	var checkerOptions []sema.Option
 	var interpreterOptions []interpreter.Option
+
+	interpreterOptions = append(interpreterOptions, interpretOptions...)
 
 	functions := r.standardLibraryFunctions(
 		context,
@@ -1949,8 +1951,7 @@ func (r *interpreterRuntime) newAddPublicKeyFunction(
 		gauge,
 		func(invocation interpreter.Invocation) interpreter.Value {
 
-			fmt.Print("start AddPublicKey: ")
-			invocation.Interpreter.OnInvokedFunctionReturn(invocation.Interpreter, 0)
+			interpreter.PrintMemoryUsage(invocation.Interpreter, "start AddPublicKey: ")
 
 			publicKeyValue, ok := invocation.Arguments[0].(*interpreter.ArrayValue)
 			if !ok {
@@ -1962,8 +1963,7 @@ func (r *interpreterRuntime) newAddPublicKeyFunction(
 				panic("addPublicKey requires the first argument to be a byte array")
 			}
 
-			fmt.Print("before AddEncodedAccountKey: ")
-			invocation.Interpreter.OnInvokedFunctionReturn(invocation.Interpreter, 0)
+			interpreter.PrintMemoryUsage(invocation.Interpreter, "before AddEncodedAccountKey: ")
 
 			wrapPanic(func() {
 				err = runtimeInterface.AddEncodedAccountKey(address, publicKey)
@@ -1974,8 +1974,7 @@ func (r *interpreterRuntime) newAddPublicKeyFunction(
 
 			inter := invocation.Interpreter
 
-			fmt.Print("before emitAccountEvent: ")
-			invocation.Interpreter.OnInvokedFunctionReturn(invocation.Interpreter, 0)
+			interpreter.PrintMemoryUsage(invocation.Interpreter, "before emitAccountEvent: ")
 
 			r.emitAccountEvent(
 				stdlib.AccountKeyAddedEventType,
@@ -1986,8 +1985,7 @@ func (r *interpreterRuntime) newAddPublicKeyFunction(
 				},
 			)
 
-			fmt.Print("after emitAccountEvent: ")
-			invocation.Interpreter.OnInvokedFunctionReturn(invocation.Interpreter, 0)
+			interpreter.PrintMemoryUsage(invocation.Interpreter, "after emitAccountEvent: ")
 
 			return interpreter.VoidValue{}
 		},

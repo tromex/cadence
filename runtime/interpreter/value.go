@@ -14677,6 +14677,8 @@ func (v *CompositeValue) Transfer(
 			panic(ExternalError{err})
 		}
 
+		PrintMemoryUsage(interpreter, "Transfer: before NewMapFromBatchData: ")
+
 		dictionary, err = atree.NewMapFromBatchData(
 			interpreter.Storage,
 			address,
@@ -14707,6 +14709,8 @@ func (v *CompositeValue) Transfer(
 		if err != nil {
 			panic(ExternalError{err})
 		}
+
+		PrintMemoryUsage(interpreter, "Transfer: after NewMapFromBatchData: ")
 
 		if remove {
 			err = v.dictionary.PopIterate(func(nameStorable atree.Storable, valueStorable atree.Storable) {

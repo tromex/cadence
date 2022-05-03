@@ -20,6 +20,7 @@ package runtime
 
 import (
 	"fmt"
+	"github.com/onflow/cadence/encoding/json"
 	"github.com/onflow/cadence/runtime/interpreter"
 	"runtime"
 	"testing"
@@ -296,4 +297,137 @@ func TestAuthAccountMetering(t *testing.T) {
 
 		require.NoError(t, err)
 	})
+}
+
+func TestContractFunctionCall(t *testing.T) {
+	interpreterRuntime := newTestInterpreterRuntime()
+
+	contractsAddress := common.MustBytesToAddress([]byte{0x1})
+	//senderAddress := common.MustBytesToAddress([]byte{0x2})
+	//receiverAddress := common.MustBytesToAddress([]byte{0x3})
+
+	accountCodes := map[common.LocationID][]byte{}
+
+	var events []cadence.Event
+
+	signerAccount := contractsAddress
+
+	runtimeInterface := &testRuntimeInterface{
+		getCode: func(location Location) (bytes []byte, err error) {
+			return accountCodes[location.ID()], nil
+		},
+		storage: newTestLedger(nil, nil),
+		getSigningAccounts: func() ([]Address, error) {
+			return []Address{signerAccount}, nil
+		},
+		resolveLocation: singleIdentifierLocationResolver(t),
+		getAccountContractCode: func(address Address, name string) (code []byte, err error) {
+			location := common.AddressLocation{
+				Address: address,
+				Name:    name,
+			}
+			return accountCodes[location.ID()], nil
+		},
+		updateAccountContractCode: func(address Address, name string, code []byte) error {
+			location := common.AddressLocation{
+				Address: address,
+				Name:    name,
+			}
+			accountCodes[location.ID()] = code
+			return nil
+		},
+		emitEvent: func(event cadence.Event) error {
+			events = append(events, event)
+			return nil
+		},
+		meterMemory: func(_ common.MemoryUsage) error {
+			return nil
+		},
+	}
+	runtimeInterface.decodeArgument = func(b []byte, t cadence.Type) (value cadence.Value, err error) {
+		return json.Decode(runtimeInterface, b)
+	}
+
+	nextTransactionLocation := newTransactionLocationGenerator()
+
+	// Deploy  contract
+
+	contractCode := `
+			access(all) contract TestContract {
+				access(all) fun createEmptyStruct(): Bar {
+					return Bar()
+				}
+
+				pub struct Bar {
+					init() {}
+				}
+
+				init() {}
+			}
+	`
+	err := interpreterRuntime.ExecuteTransaction(
+		Script{
+			Source: utils.DeploymentTransaction(
+				"TestContract",
+				[]byte(contractCode),
+			),
+		},
+		Context{
+			Interface: runtimeInterface,
+			Location:  nextTransactionLocation(),
+		},
+	)
+	require.NoError(t, err)
+
+	// Send transaction
+
+	//signerAccount = contractsAddress
+
+	script := `
+			import TestContract from 0x1
+
+            pub fun main() {
+                var i = 0
+                while i < 10 {
+                    var a = TestContract.createEmptyStruct()
+                    i = i + 1
+				}
+            }
+        `
+
+	meter := newTestMemoryGauge()
+
+	var m runtime.MemStats
+	var startMem uint64
+	var lastMem uint64
+
+	mRef := &m
+
+	_, err = interpreterRuntime.ExecuteScript(
+		Script{
+			Source: []byte(script),
+		},
+		Context{
+			Interface: runtimeInterface,
+			Location:  nextTransactionLocation(),
+		},
+		interpreter.WithOnFunctionInvocationHandler(func(_ *interpreter.Interpreter, _ int) {
+			//meter.meter = make(map[common.MemoryKind]uint64)
+			runtime.ReadMemStats(mRef)
+			startMem = m.TotalAlloc
+			lastMem = startMem
+		}),
+		interpreter.WithOnInvokedFunctionReturnHandler(func(_ *interpreter.Interpreter, _ int) {
+			runtime.ReadMemStats(mRef)
+			fmt.Println(m.TotalAlloc-startMem, "diff:", m.TotalAlloc-lastMem)
+			lastMem = m.TotalAlloc
+			//fmt.Println(meter.meter)
+		}),
+		interpreter.WithTracingEnabled(false),
+		interpreter.WithAtreeValueValidationEnabled(false),
+		interpreter.WithAtreeStorageValidationEnabled(false),
+		interpreter.WithMemoryGauge(meter),
+	)
+	require.NoError(t, err)
+
 }

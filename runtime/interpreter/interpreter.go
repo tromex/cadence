@@ -1336,6 +1336,10 @@ func (interpreter *Interpreter) visitFunctionBody(
 	returnType sema.Type,
 ) Value {
 
+
+	PrintMemoryUsage(interpreter, "start of visitFunctionBody")
+
+
 	// block scope: each function block gets an activation record
 	interpreter.activations.PushNewWithCurrent()
 	defer interpreter.activations.Pop()
@@ -1364,6 +1368,8 @@ func (interpreter *Interpreter) visitFunctionBody(
 	// If it is a resource type, the constant has the same type as a reference to the return type.
 	// If it is not a resource type, the constant has the same type as the return type.
 
+	PrintMemoryUsage(interpreter, "before declareVariable result: ")
+
 	if returnType != sema.VoidType {
 		var resultValue Value
 		if returnType.IsResourceType() {
@@ -1376,6 +1382,8 @@ func (interpreter *Interpreter) visitFunctionBody(
 			resultValue,
 		)
 	}
+
+	PrintMemoryUsage(interpreter, "after declareVariable result: ")
 
 	interpreter.visitConditions(postConditions)
 
@@ -1704,7 +1712,7 @@ func (interpreter *Interpreter) declareNonEnumCompositeValue(
 			interpreter,
 			func(invocation Invocation) Value {
 
-				interpreter.OnInvokedFunctionReturn(interpreter, 0)
+				PrintMemoryUsage(interpreter, "start of constructorGenerator: ")
 
 				// Check that the resource is constructed
 				// in the same location as it was declared
@@ -1729,7 +1737,7 @@ func (interpreter *Interpreter) declareNonEnumCompositeValue(
 					)
 				}
 
-				interpreter.OnInvokedFunctionReturn(interpreter, 0)
+				PrintMemoryUsage(interpreter, "after loading injected fields: ")
 
 				var fields []CompositeField
 
@@ -1760,8 +1768,7 @@ func (interpreter *Interpreter) declareNonEnumCompositeValue(
 					)
 				}
 
-				fmt.Print("before NewCompositeValue(): ")
-				interpreter.OnInvokedFunctionReturn(interpreter, 0)
+				PrintMemoryUsage(interpreter, "before NewCompositeValue(): ")
 
 				value := NewCompositeValue(
 					interpreter,
@@ -1772,8 +1779,7 @@ func (interpreter *Interpreter) declareNonEnumCompositeValue(
 					address,
 				)
 
-				fmt.Print("after NewCompositeValue(): ")
-				interpreter.OnInvokedFunctionReturn(interpreter, 0)
+				PrintMemoryUsage(interpreter, "after NewCompositeValue(): ")
 
 				value.InjectedFields = injectedFields
 				value.Functions = functions
@@ -1793,8 +1799,7 @@ func (interpreter *Interpreter) declareNonEnumCompositeValue(
 					value.NestedVariables = nestedVariables
 				}
 
-				fmt.Print("before initializer(): ")
-				interpreter.OnInvokedFunctionReturn(interpreter, 0)
+				PrintMemoryUsage(interpreter, "before initializer(): ")
 
 				if initializerFunction != nil {
 					// NOTE: arguments are already properly boxed by invocation expression
@@ -1802,8 +1807,7 @@ func (interpreter *Interpreter) declareNonEnumCompositeValue(
 					_ = initializerFunction.invoke(invocation)
 				}
 
-				fmt.Print("after initializer(): ")
-				interpreter.OnInvokedFunctionReturn(interpreter, 0)
+				PrintMemoryUsage(interpreter, "after initializer(): ")
 
 				return value
 			},

@@ -8895,7 +8895,7 @@ type TestStorage struct {
 
 func NewTestStorage(storage interpreter.InMemoryStorage) *TestStorage {
 	return &TestStorage{
-		Slabs: make(map[atree.StorageID]atree.Slab, 0),
+		Slabs:           make(map[atree.StorageID]atree.Slab, 0),
 		InMemoryStorage: storage,
 	}
 }
@@ -8904,6 +8904,7 @@ func (t *TestStorage) Store(id atree.StorageID, slab atree.Slab) error {
 	t.Slabs[id] = slab
 	return nil
 }
+
 //
 //func (t *TestStorage) Retrieve(id atree.StorageID) (atree.Slab, bool, error) {
 //	panic("implement me")
@@ -8913,7 +8914,6 @@ func (t *TestStorage) Store(id atree.StorageID, slab atree.Slab) error {
 //	panic("implement me")
 //}
 
-
 func (t *TestStorage) GenerateStorageID(address atree.Address) (atree.StorageID, error) {
 	//return atree.StorageID{}, nil
 
@@ -8922,6 +8922,7 @@ func (t *TestStorage) GenerateStorageID(address atree.Address) (atree.StorageID,
 		Index:   atree.StorageIndex{'2'},
 	}, nil
 }
+
 //
 //func (t *TestStorage) Count() int {
 //	panic("implement me")
@@ -8941,7 +8942,7 @@ func (t *TestStorage) GenerateStorageID(address atree.Address) (atree.StorageID,
 
 var _ interpreter.Storage = &TestStorage{}
 
-func TestNewAtreeMemoryUsage(t *testing.T) {
+func TestCompositeMemoryUsage(t *testing.T) {
 	meter := newTestMemoryGauge()
 
 	inter, _ := interpreter.NewInterpreter(
@@ -8955,12 +8956,13 @@ func TestNewAtreeMemoryUsage(t *testing.T) {
 	fields := []interpreter.CompositeField{}
 	loc := common.IdentifierLocation("A")
 	address := common.Address{}
+	atreeAddress := atree.Address{}
 
 	var m runtime.MemStats
 	runtime.ReadMemStats(&m)
 	startMem := m.TotalAlloc
 
-	_ = interpreter.NewCompositeValue(
+	composite := interpreter.NewCompositeValue(
 		inter,
 		loc,
 		"Foo",
@@ -8969,20 +8971,19 @@ func TestNewAtreeMemoryUsage(t *testing.T) {
 		address,
 	)
 
-	//_ = interpreter.NewCompositeValue(
-	//	inter,
-	//	loc,
-	//	"Foo",
-	//	common.CompositeKindStructure,
-	//	fields,
-	//	address,
-	//)
+	runtime.ReadMemStats(&m)
+	fmt.Println(fmt.Sprintf("Creation = %v B", m.TotalAlloc-startMem))
 
 	runtime.ReadMemStats(&m)
-	fmt.Printf("Alloc = %v B", m.TotalAlloc-startMem)
+	startMem = m.TotalAlloc
+
+	composite.Transfer(inter, interpreter.ReturnEmptyLocationRange, atreeAddress, false, nil)
+
+	runtime.ReadMemStats(&m)
+	fmt.Println(fmt.Sprintf("Transfer = %v B", m.TotalAlloc-startMem))
 }
 
-func TestNewAtreeArrayMemoryUsage(t *testing.T) {
+func TestArrayMemoryUsage(t *testing.T) {
 	meter := newTestMemoryGauge()
 
 	inter, _ := interpreter.NewInterpreter(
@@ -9033,7 +9034,6 @@ func TestStructCreate(t *testing.T) {
 	var m runtime.MemStats
 	var startMem uint64
 	var lastMem uint64
-
 	mRef := &m
 
 	inter, _ := parseCheckAndInterpretWithOptionsAndMemoryMetering(t, script,
@@ -9043,6 +9043,7 @@ func TestStructCreate(t *testing.T) {
 					//meter.meter = make(map[common.MemoryKind]uint64)
 					runtime.ReadMemStats(mRef)
 					startMem = m.TotalAlloc
+					lastMem = startMem
 				}),
 				interpreter.WithOnInvokedFunctionReturnHandler(func(_ *interpreter.Interpreter, _ int) {
 					runtime.ReadMemStats(mRef)
@@ -9083,6 +9084,7 @@ func TestArrayCreate(t *testing.T) {
 					//meter.meter = make(map[common.MemoryKind]uint64)
 					runtime.ReadMemStats(mRef)
 					startMem = m.TotalAlloc
+					lastMem = startMem
 				}),
 				interpreter.WithOnInvokedFunctionReturnHandler(func(_ *interpreter.Interpreter, _ int) {
 					runtime.ReadMemStats(mRef)
@@ -9096,7 +9098,8 @@ func TestArrayCreate(t *testing.T) {
 				interpreter.WithAtreeStorageValidationEnabled(false),
 			},
 		},
-		meter)
+		meter,
+	)
 
 	_, err := inter.Invoke("main")
 	assert.NoError(t, err)
