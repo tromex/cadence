@@ -20,6 +20,7 @@ package interpreter_test
 
 import (
 	"fmt"
+	"github.com/onflow/atree"
 	"runtime"
 	"testing"
 
@@ -8887,6 +8888,59 @@ func TestInterpretASTMetering(t *testing.T) {
 	})
 }
 
+type TestStorage struct {
+	interpreter.InMemoryStorage
+	Slabs map[atree.StorageID]atree.Slab
+}
+
+func NewTestStorage(storage interpreter.InMemoryStorage) *TestStorage {
+	return &TestStorage{
+		Slabs: make(map[atree.StorageID]atree.Slab, 0),
+		InMemoryStorage: storage,
+	}
+}
+
+func (t *TestStorage) Store(id atree.StorageID, slab atree.Slab) error {
+	t.Slabs[id] = slab
+	return nil
+}
+//
+//func (t *TestStorage) Retrieve(id atree.StorageID) (atree.Slab, bool, error) {
+//	panic("implement me")
+//}
+//
+//func (t *TestStorage) Remove(id atree.StorageID) error {
+//	panic("implement me")
+//}
+
+
+func (t *TestStorage) GenerateStorageID(address atree.Address) (atree.StorageID, error) {
+	//return atree.StorageID{}, nil
+
+	return atree.StorageID{
+		Address: atree.Address{'1'},
+		Index:   atree.StorageIndex{'2'},
+	}, nil
+}
+//
+//func (t *TestStorage) Count() int {
+//	panic("implement me")
+//}
+//
+//func (t *TestStorage) SlabIterator() (atree.SlabIterator, error) {
+//	panic("implement me")
+//}
+//
+//func (t *TestStorage) GetStorageMap(address common.Address, domain string, createIfNotExists bool) *interpreter.StorageMap {
+//	panic("implement me")
+//}
+//
+//func (t *TestStorage) CheckHealth() error {
+//	panic("implement me")
+//}
+
+var _ interpreter.Storage = &TestStorage{}
+
 func TestNewAtreeMemoryUsage(t *testing.T) {
 	meter := newTestMemoryGauge()
 
@@ -8894,7 +8948,8 @@ func TestNewAtreeMemoryUsage(t *testing.T) {
 		nil,
 		nil,
 		interpreter.WithMemoryGauge(meter),
-		interpreter.WithStorage(interpreter.NewInMemoryStorage(meter)),
+		//interpreter.WithStorage(interpreter.NewInMemoryStorage(meter)),
+		interpreter.WithStorage(NewTestStorage(interpreter.NewInMemoryStorage(meter))),
 	)
 
 	fields := []interpreter.CompositeField{}
@@ -8913,6 +8968,15 @@ func TestNewAtreeMemoryUsage(t *testing.T) {
 		fields,
 		address,
 	)
+
+	//_ = interpreter.NewCompositeValue(
+	//	inter,
+	//	loc,
+	//	"Foo",
+	//	common.CompositeKindStructure,
+	//	fields,
+	//	address,
+	//)
 
 	runtime.ReadMemStats(&m)
 	fmt.Printf("Alloc = %v B", m.TotalAlloc-startMem)
@@ -8952,7 +9016,11 @@ func TestNewAtreeArrayMemoryUsage(t *testing.T) {
 func TestStructCreate(t *testing.T) {
 	script := `
             pub fun main() {
-                var z = Foo()
+                var i = 0
+                while i < 10 {
+                    var a = Foo()
+                    i = i + 1
+				}
             }
 
             pub struct Foo {
