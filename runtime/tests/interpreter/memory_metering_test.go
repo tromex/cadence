@@ -8945,12 +8945,29 @@ var _ interpreter.Storage = &TestStorage{}
 func TestCompositeMemoryUsage(t *testing.T) {
 	meter := newTestMemoryGauge()
 
+	var m runtime.MemStats
+	var startMem uint64
+	var lastMem uint64
+	mRef := &m
+
 	inter, _ := interpreter.NewInterpreter(
 		nil,
 		nil,
 		interpreter.WithMemoryGauge(meter),
 		//interpreter.WithStorage(interpreter.NewInMemoryStorage(meter)),
 		interpreter.WithStorage(NewTestStorage(interpreter.NewInMemoryStorage(meter))),
+		interpreter.WithOnFunctionInvocationHandler(func(_ *interpreter.Interpreter, _ int) {
+			//meter.meter = make(map[common.MemoryKind]uint64)
+			runtime.ReadMemStats(mRef)
+			startMem = m.TotalAlloc
+			lastMem = startMem
+		}),
+		interpreter.WithOnInvokedFunctionReturnHandler(func(_ *interpreter.Interpreter, _ int) {
+			runtime.ReadMemStats(mRef)
+			fmt.Println(m.TotalAlloc-startMem, "diff:", m.TotalAlloc-lastMem)
+			lastMem = m.TotalAlloc
+			//fmt.Println(meter.meter)
+		}),
 	)
 
 	fields := []interpreter.CompositeField{}
@@ -8958,11 +8975,24 @@ func TestCompositeMemoryUsage(t *testing.T) {
 	address := common.Address{}
 	atreeAddress := atree.Address{}
 
-	var m runtime.MemStats
-	runtime.ReadMemStats(&m)
-	startMem := m.TotalAlloc
-
+	// warmup (allow initial map expansion)
 	composite := interpreter.NewCompositeValue(
+		inter,
+		loc,
+		"Foo",
+		common.CompositeKindStructure,
+		fields,
+		address,
+	)
+	_ = composite.Transfer(inter, interpreter.ReturnEmptyLocationRange, atreeAddress, false, nil)
+
+	fmt.Println("\n-------- end of warmup --------")
+	fmt.Println()
+
+	runtime.ReadMemStats(mRef)
+	startMem = m.TotalAlloc
+
+	composite = interpreter.NewCompositeValue(
 		inter,
 		loc,
 		"Foo",
@@ -8972,15 +9002,15 @@ func TestCompositeMemoryUsage(t *testing.T) {
 	)
 
 	runtime.ReadMemStats(&m)
-	fmt.Println(fmt.Sprintf("Creation = %v B", m.TotalAlloc-startMem))
+	fmt.Println(fmt.Sprintf("Creation = %v B \n", m.TotalAlloc-startMem))
 
 	runtime.ReadMemStats(&m)
 	startMem = m.TotalAlloc
 
-	composite.Transfer(inter, interpreter.ReturnEmptyLocationRange, atreeAddress, false, nil)
+	_ = composite.Transfer(inter, interpreter.ReturnEmptyLocationRange, atreeAddress, false, nil)
 
 	runtime.ReadMemStats(&m)
-	fmt.Println(fmt.Sprintf("Transfer = %v B", m.TotalAlloc-startMem))
+	fmt.Println(fmt.Sprintf("Transfer = %v B\n", m.TotalAlloc-startMem))
 }
 
 func TestArrayMemoryUsage(t *testing.T) {
