@@ -14301,6 +14301,13 @@ func (v *CompositeValue) SetMember(
 	name string,
 	value Value,
 ) {
+
+	// length increases by 1
+	dataSlabs, metaDataSlabs := common.AdditionalAtreeMemoryUsage(v.dictionary.Count(), 0, false)
+	common.UseMemory(interpreter, common.AtreeMapElementOverhead)
+	common.UseMemory(interpreter, dataSlabs)
+	common.UseMemory(interpreter, metaDataSlabs)
+
 	if interpreter.invalidatedResourceValidationEnabled {
 		v.checkInvalidatedResourceUse(getLocationRange)
 	}
