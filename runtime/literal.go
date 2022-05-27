@@ -103,22 +103,28 @@ func ParseLiteralArgumentList(
 	return result, nil
 }
 
-func arrayLiteralValue(inter *interpreter.Interpreter, elements []ast.Expression, elementType sema.Type) (cadence.Value, error) {
+func arrayLiteralValue(inter *interpreter.Interpreter, elements []ast.Expression, arraySemaType sema.ArrayType) (cadence.Value, error) {
 	return cadence.NewMeteredArray(
 		inter,
 		len(elements),
-		func() ([]cadence.Value, error) {
+		func() ([]cadence.Value, cadence.ArrayType, error) {
 			values := make([]cadence.Value, len(elements))
 
 			for i, element := range elements {
-				convertedElement, err := LiteralValue(inter, element, elementType)
+				convertedElement, err := LiteralValue(inter, element, arraySemaType.ElementType(false))
 				if err != nil {
-					return nil, err
+					return nil, nil, err
 				}
 				values[i] = convertedElement
 			}
 
-			return values, nil
+			exportedType := ExportType(arraySemaType, map[sema.TypeID]cadence.Type{})
+			arrayType, ok := exportedType.(cadence.ArrayType)
+			if !ok {
+				return nil, nil, fmt.Errorf("invalid type for array: %s", exportedType)
+			}
+
+			return values, arrayType, nil
 		})
 }
 
@@ -285,7 +291,7 @@ func LiteralValue(inter *interpreter.Interpreter, expression ast.Expression, ty 
 			return nil, LiteralExpressionTypeError
 		}
 
-		return arrayLiteralValue(inter, expression.Values, ty.Type)
+		return arrayLiteralValue(inter, expression.Values, ty)
 
 	case *sema.ConstantSizedType:
 		expression, ok := expression.(*ast.ArrayExpression)
@@ -293,7 +299,7 @@ func LiteralValue(inter *interpreter.Interpreter, expression ast.Expression, ty 
 			return nil, LiteralExpressionTypeError
 		}
 
-		return arrayLiteralValue(inter, expression.Values, ty.Type)
+		return arrayLiteralValue(inter, expression.Values, ty)
 
 	case *sema.OptionalType:
 		if _, ok := expression.(*ast.NilExpression); ok {
@@ -316,7 +322,7 @@ func LiteralValue(inter *interpreter.Interpreter, expression ast.Expression, ty 
 		return cadence.NewMeteredDictionary(
 			inter,
 			len(expression.Entries),
-			func() ([]cadence.KeyValuePair, error) {
+			func() ([]cadence.KeyValuePair, cadence.DictionaryType, error) {
 				pairs := make([]cadence.KeyValuePair, len(expression.Entries))
 
 				for i, entry := range expression.Entries {
@@ -324,16 +330,24 @@ func LiteralValue(inter *interpreter.Interpreter, expression ast.Expression, ty 
 
 					pairs[i].Key, err = LiteralValue(inter, entry.Key, ty.KeyType)
 					if err != nil {
-						return nil, err
+						return nil, cadence.DictionaryType{}, err
 					}
 
 					pairs[i].Value, err = LiteralValue(inter, entry.Value, ty.ValueType)
 					if err != nil {
-						return nil, err
+						return nil, cadence.DictionaryType{}, err
 					}
 				}
 
-				return pairs, nil
+				exportedType := ExportType(ty, map[sema.TypeID]cadence.Type{})
+				dictionaryType, ok := exportedType.(cadence.DictionaryType)
+				if !ok {
+					return nil,
+						cadence.DictionaryType{},
+						fmt.Errorf("invalid type for dictionary: %s", exportedType)
+				}
+
+				return pairs, dictionaryType, nil
 			},
 		)
 

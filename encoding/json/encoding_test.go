@@ -642,6 +642,11 @@ func TestEncodeDictionary(t *testing.T) {
 
 	t.Parallel()
 
+	valueType := cadence.DictionaryType{
+		KeyType:     cadence.StringType{},
+		ElementType: cadence.IntType{},
+	}
+
 	simpleDict := encodeTest{
 		"Simple",
 		cadence.NewDictionary([]cadence.KeyValuePair{
@@ -657,7 +662,7 @@ func TestEncodeDictionary(t *testing.T) {
 				Key:   cadence.String("c"),
 				Value: cadence.NewInt(3),
 			},
-		}),
+		}).WithType(valueType),
 		`{"type":"Dictionary","value":[{"key":{"type":"String","value":"a"},"value":{"type":"Int","value":"1"}},{"key":{"type":"String","value":"b"},"value":{"type":"Int","value":"2"}},{"key":{"type":"String","value":"c"},"value":{"type":"Int","value":"3"}}]}`,
 	}
 
@@ -671,7 +676,7 @@ func TestEncodeDictionary(t *testing.T) {
 						Key:   cadence.String("1"),
 						Value: cadence.NewInt(1),
 					},
-				}),
+				}).WithType(valueType),
 			},
 			{
 				Key: cadence.String("b"),
@@ -680,7 +685,7 @@ func TestEncodeDictionary(t *testing.T) {
 						Key:   cadence.String("2"),
 						Value: cadence.NewInt(2),
 					},
-				}),
+				}).WithType(valueType),
 			},
 			{
 				Key: cadence.String("c"),
@@ -689,8 +694,11 @@ func TestEncodeDictionary(t *testing.T) {
 						Key:   cadence.String("3"),
 						Value: cadence.NewInt(3),
 					},
-				}),
+				}).WithType(valueType),
 			},
+		}).WithType(cadence.DictionaryType{
+			KeyType:     cadence.StringType{},
+			ElementType: valueType,
 		}),
 		`{"type":"Dictionary","value":[{"key":{"type":"String","value":"a"},"value":{"type":"Dictionary","value":[{"key":{"type":"String","value":"1"},"value":{"type":"Int","value":"1"}}]}},{"key":{"type":"String","value":"b"},"value":{"type":"Dictionary","value":[{"key":{"type":"String","value":"2"},"value":{"type":"Int","value":"2"}}]}},{"key":{"type":"String","value":"c"},"value":{"type":"Dictionary","value":[{"key":{"type":"String","value":"3"},"value":{"type":"Int","value":"3"}}]}}]}`,
 	}
@@ -716,6 +724,9 @@ func TestEncodeDictionary(t *testing.T) {
 					cadence.NewInt(3),
 				}).WithType(fooResourceType),
 			},
+		}).WithType(cadence.DictionaryType{
+			KeyType:     cadence.StringType{},
+			ElementType: fooResourceType,
 		}),
 		`{"type":"Dictionary","value":[{"key":{"type":"String","value":"a"},"value":{"type":"Resource","value":{"id":"S.test.Foo","fields":[{"name":"bar","value":{"type":"Int","value":"1"}}]}}},{"key":{"type":"String","value":"b"},"value":{"type":"Resource","value":{"id":"S.test.Foo","fields":[{"name":"bar","value":{"type":"Int","value":"2"}}]}}},{"key":{"type":"String","value":"c"},"value":{"type":"Resource","value":{"id":"S.test.Foo","fields":[{"name":"bar","value":{"type":"Int","value":"3"}}]}}}]}`,
 	}

@@ -559,12 +559,14 @@ func (d *Decoder) decodeArray(valueJSON interface{}) cadence.Array {
 	value, err := cadence.NewMeteredArray(
 		d.gauge,
 		len(v),
-		func() ([]cadence.Value, error) {
+		func() ([]cadence.Value, cadence.ArrayType, error) {
 			values := make([]cadence.Value, len(v))
 			for i, val := range v {
 				values[i] = d.decodeJSON(val)
 			}
-			return values, nil
+
+			// TODO: return array type
+			return values, nil, nil
 		},
 	)
 
@@ -581,14 +583,15 @@ func (d *Decoder) decodeDictionary(valueJSON interface{}) cadence.Dictionary {
 	value, err := cadence.NewMeteredDictionary(
 		d.gauge,
 		len(v),
-		func() ([]cadence.KeyValuePair, error) {
+		func() ([]cadence.KeyValuePair, cadence.DictionaryType, error) {
 			pairs := make([]cadence.KeyValuePair, len(v))
 
 			for i, val := range v {
 				pairs[i] = d.decodeKeyValuePair(val)
 			}
 
-			return pairs, nil
+			// TODO: Decode and pass type
+			return pairs, cadence.DictionaryType{}, nil
 		},
 	)
 

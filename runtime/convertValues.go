@@ -234,7 +234,7 @@ func exportArrayValue(
 	return cadence.NewMeteredArray(
 		inter,
 		v.Count(),
-		func() ([]cadence.Value, error) {
+		func() ([]cadence.Value, cadence.ArrayType, error) {
 			values := make([]cadence.Value, 0, v.Count())
 
 			var err error
@@ -252,9 +252,21 @@ func exportArrayValue(
 			})
 
 			if err != nil {
-				return nil, err
+				return nil, nil, err
 			}
-			return values, nil
+
+			arraySemaType, err := inter.ConvertStaticToSemaType(v.Type)
+			if err != nil {
+				return nil, nil, err
+			}
+
+			exportedType := ExportType(arraySemaType, map[sema.TypeID]cadence.Type{})
+			arrayType, ok := exportedType.(cadence.ArrayType)
+			if !ok {
+				return nil, nil, fmt.Errorf("invalid type for array: %s", exportedType)
+			}
+
+			return values, arrayType, nil
 		},
 	)
 }
@@ -539,7 +551,7 @@ func exportDictionaryValue(
 	return cadence.NewMeteredDictionary(
 		inter,
 		v.Count(),
-		func() ([]cadence.KeyValuePair, error) {
+		func() ([]cadence.KeyValuePair, cadence.DictionaryType, error) {
 			var err error
 			pairs := make([]cadence.KeyValuePair, 0, v.Count())
 
@@ -569,10 +581,22 @@ func exportDictionaryValue(
 			})
 
 			if err != nil {
-				return nil, err
+				return nil, cadence.DictionaryType{}, err
 			}
 
-			return pairs, nil
+			// convert type
+			dictionarySemaType, err := inter.ConvertStaticToSemaType(v.Type)
+			if err != nil {
+				return nil, cadence.DictionaryType{}, err
+			}
+
+			exportedType := ExportType(dictionarySemaType, map[sema.TypeID]cadence.Type{})
+			dictionaryType, ok := exportedType.(cadence.DictionaryType)
+			if !ok {
+				return nil, cadence.DictionaryType{}, fmt.Errorf("invalid type for dictionary: %s", exportedType)
+			}
+
+			return pairs, dictionaryType, nil
 		},
 	)
 }

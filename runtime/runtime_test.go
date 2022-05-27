@@ -7258,3 +7258,105 @@ func TestRuntimeComputationMetring(t *testing.T) {
 		})
 	}
 }
+
+func TestBug(t *testing.T) {
+
+	if testing.Short() {
+		t.Skip()
+	}
+
+	t.Parallel()
+
+	runtime := newTestInterpreterRuntime()
+
+	const contract = `
+        pub contract HelloWorld {
+
+			pub event FooEvent(x: [String]?)
+			pub var arrayEvent: [String]
+
+			init() {
+				self.arrayEvent = ["Event"]
+			}
+		
+			pub fun hello() {
+				emit FooEvent(x: self.arrayEvent)
+			}
+		}
+    `
+
+	deployTx := utils.DeploymentTransaction("HelloWorld", []byte(contract))
+
+	accountCodes := map[common.LocationID]string{}
+
+	signerAddress := common.MustBytesToAddress([]byte{0x1})
+
+	runtimeInterface := &testRuntimeInterface{
+		storage: newTestLedger(nil, nil),
+		getSigningAccounts: func() ([]Address, error) {
+			return []Address{signerAddress}, nil
+		},
+		resolveLocation: singleIdentifierLocationResolver(t),
+		updateAccountContractCode: func(address Address, name string, code []byte) error {
+			location := common.AddressLocation{
+				Address: address,
+				Name:    name,
+			}
+			accountCodes[location.ID()] = string(code)
+			return nil
+		},
+		getAccountContractCode: func(address Address, name string) (code []byte, err error) {
+			location := common.AddressLocation{
+				Address: address,
+				Name:    name,
+			}
+			code = []byte(accountCodes[location.ID()])
+			return code, nil
+		},
+		emitEvent: func(event cadence.Event) error {
+			fmt.Println(event.Fields[0].Type().ID())
+			return nil
+		},
+	}
+
+	runtimeInterface.decodeArgument = func(b []byte, t cadence.Type) (cadence.Value, error) {
+		return jsoncdc.Decode(runtimeInterface, b)
+	}
+
+	nextTransactionLocation := newTransactionLocationGenerator()
+
+	// Deploy
+
+	err := runtime.ExecuteTransaction(
+		Script{
+			Source: deployTx,
+		},
+		Context{
+			Interface: runtimeInterface,
+			Location:  nextTransactionLocation(),
+		},
+	)
+	require.NoError(t, err)
+
+	transaction := `
+		import HelloWorld from 0x1
+		
+		transaction {
+			prepare(acct: AuthAccount) {}
+			execute {
+				HelloWorld.hello()
+			}
+		}
+	`
+
+	err = runtime.ExecuteTransaction(
+		Script{
+			Source: []byte(transaction),
+		},
+		Context{
+			Interface: runtimeInterface,
+			Location:  nextTransactionLocation(),
+		},
+	)
+	require.NoError(t, err)
+}

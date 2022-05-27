@@ -1348,18 +1348,18 @@ func NewArray(values []Value) Array {
 func NewMeteredArray(
 	gauge common.MemoryGauge,
 	length int,
-	constructor func() ([]Value, error),
+	constructor func() ([]Value, ArrayType, error),
 ) (Array, error) {
 	baseUse, lengthUse := common.NewCadenceArrayMemoryUsages(length)
 	common.UseMemory(gauge, baseUse)
 	common.UseMemory(gauge, lengthUse)
 
-	values, err := constructor()
+	values, arrayType, err := constructor()
 	if err != nil {
 		return Array{}, err
 	}
 
-	return NewArray(values), nil
+	return NewArray(values).WithType(arrayType), nil
 }
 
 func (Array) isValue() {}
@@ -1411,15 +1411,15 @@ func NewDictionary(pairs []KeyValuePair) Dictionary {
 func NewMeteredDictionary(
 	gauge common.MemoryGauge,
 	size int,
-	constructor func() ([]KeyValuePair, error),
+	constructor func() ([]KeyValuePair, DictionaryType, error),
 ) (Dictionary, error) {
 	common.UseMemory(gauge, common.CadenceDictionaryValueMemoryUsage)
 
-	pairs, err := constructor()
+	pairs, dictionaryType, err := constructor()
 	if err != nil {
 		return Dictionary{}, err
 	}
-	return NewDictionary(pairs), err
+	return NewDictionary(pairs).WithType(dictionaryType), err
 }
 
 func (Dictionary) isValue() {}

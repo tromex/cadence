@@ -68,8 +68,11 @@ func TestExportValue(t *testing.T) {
 				require.Error(t, err)
 			} else {
 				require.NoError(t, err)
-
 				assert.Equal(t, tt.expected, actual)
+			}
+
+			if actual != nil {
+				assert.NotNil(t, actual.Type())
 			}
 		})
 	}
@@ -165,7 +168,10 @@ func TestExportValue(t *testing.T) {
 					common.Address{},
 				)
 			},
-			expected: cadence.NewArray([]cadence.Value{}),
+			expected: cadence.NewArray([]cadence.Value{}).
+				WithType(cadence.VariableSizedArrayType{
+					ElementType: cadence.AnyStructType{},
+				}),
 		},
 		{
 			label: "Array (non-empty)",
@@ -183,6 +189,8 @@ func TestExportValue(t *testing.T) {
 			expected: cadence.NewArray([]cadence.Value{
 				cadence.NewInt(42),
 				cadence.String("foo"),
+			}).WithType(cadence.VariableSizedArrayType{
+				ElementType: cadence.AnyStructType{},
 			}),
 		},
 		{
@@ -196,7 +204,11 @@ func TestExportValue(t *testing.T) {
 					},
 				)
 			},
-			expected: cadence.NewDictionary([]cadence.KeyValuePair{}),
+			expected: cadence.NewDictionary([]cadence.KeyValuePair{}).
+				WithType(cadence.DictionaryType{
+					KeyType:     cadence.StringType{},
+					ElementType: cadence.AnyStructType{},
+				}),
 		},
 		{
 			label: "Dictionary (non-empty)",
@@ -222,6 +234,9 @@ func TestExportValue(t *testing.T) {
 					Key:   cadence.String("a"),
 					Value: cadence.NewInt(1),
 				},
+			}).WithType(cadence.DictionaryType{
+				KeyType:     cadence.StringType{},
+				ElementType: cadence.AnyStructType{},
 			}),
 		},
 		{
@@ -421,6 +436,8 @@ func TestExportValue(t *testing.T) {
 								cadence.NewUInt8(1),
 								cadence.NewUInt8(2),
 								cadence.NewUInt8(3),
+							}).WithType(cadence.VariableSizedArrayType{
+								ElementType: cadence.UInt8Type{},
 							}),
 							cadence.Enum{
 								EnumType: signatureAlgorithmType,
@@ -1372,6 +1389,8 @@ func TestExportResourceArrayValue(t *testing.T) {
 			cadence.NewUInt64(0),
 			cadence.NewInt(2),
 		}).WithType(fooResourceType),
+	}).WithType(cadence.VariableSizedArrayType{
+		ElementType: fooResourceType,
 	})
 
 	assert.Equal(t, expected, actual)
@@ -1414,6 +1433,9 @@ func TestExportResourceDictionaryValue(t *testing.T) {
 				cadence.NewInt(1),
 			}).WithType(fooResourceType),
 		},
+	}).WithType(cadence.DictionaryType{
+		KeyType:     cadence.StringType{},
+		ElementType: fooResourceType,
 	})
 
 	assert.Equal(t, expected, actual)
@@ -1593,7 +1615,15 @@ func TestExportReferenceValue(t *testing.T) {
 		expected := cadence.NewArray([]cadence.Value{
 			cadence.NewArray([]cadence.Value{
 				nil,
+			}).WithType(cadence.VariableSizedArrayType{
+				ElementType: cadence.ReferenceType{
+					Type: cadence.AnyStructType{},
+				},
 			}),
+		}).WithType(cadence.VariableSizedArrayType{
+			ElementType: cadence.ReferenceType{
+				Type: cadence.AnyStructType{},
+			},
 		})
 
 		assert.Equal(t, expected, actual)
@@ -2181,7 +2211,10 @@ func TestRuntimeArgumentPassing(t *testing.T) {
 		{
 			label:         "Array empty",
 			typeSignature: "[String]",
-			exportedValue: cadence.NewArray([]cadence.Value{}),
+			exportedValue: cadence.NewArray([]cadence.Value{}).
+				WithType(cadence.VariableSizedArrayType{
+					ElementType: cadence.StringType{},
+				}),
 		},
 		{
 			label:         "Array non-empty",
@@ -2189,6 +2222,8 @@ func TestRuntimeArgumentPassing(t *testing.T) {
 			exportedValue: cadence.NewArray([]cadence.Value{
 				cadence.String("foo"),
 				cadence.String("bar"),
+			}).WithType(cadence.VariableSizedArrayType{
+				ElementType: cadence.StringType{},
 			}),
 		},
 		{
@@ -2199,6 +2234,9 @@ func TestRuntimeArgumentPassing(t *testing.T) {
 					Key:   cadence.String("foo"),
 					Value: cadence.String("bar"),
 				},
+			}).WithType(cadence.DictionaryType{
+				KeyType:     cadence.StringType{},
+				ElementType: cadence.StringType{},
 			}),
 		},
 		{
@@ -2381,6 +2419,20 @@ func TestRuntimeComplexStructArgumentPassing(t *testing.T) {
 
 	t.Parallel()
 
+	bFieldType := cadence.DictionaryType{
+		KeyType:     cadence.StringType{},
+		ElementType: cadence.StringType{},
+	}
+
+	cFieldType := cadence.VariableSizedArrayType{
+		ElementType: cadence.StringType{},
+	}
+
+	dFieldType := cadence.ConstantSizedArrayType{
+		ElementType: cadence.StringType{},
+		Size:        2,
+	}
+
 	// Complex struct value
 	complexStructValue := cadence.Struct{
 		StructType: &cadence.StructType{
@@ -2395,23 +2447,15 @@ func TestRuntimeComplexStructArgumentPassing(t *testing.T) {
 				},
 				{
 					Identifier: "b",
-					Type: cadence.DictionaryType{
-						KeyType:     cadence.StringType{},
-						ElementType: cadence.StringType{},
-					},
+					Type:       bFieldType,
 				},
 				{
 					Identifier: "c",
-					Type: cadence.VariableSizedArrayType{
-						ElementType: cadence.StringType{},
-					},
+					Type:       cFieldType,
 				},
 				{
 					Identifier: "d",
-					Type: cadence.ConstantSizedArrayType{
-						ElementType: cadence.StringType{},
-						Size:        2,
-					},
+					Type:       dFieldType,
 				},
 				{
 					Identifier: "e",
@@ -2449,15 +2493,15 @@ func TestRuntimeComplexStructArgumentPassing(t *testing.T) {
 					Key:   cadence.String("name"),
 					Value: cadence.String("Doe"),
 				},
-			}),
+			}).WithType(bFieldType),
 			cadence.NewArray([]cadence.Value{
 				cadence.String("foo"),
 				cadence.String("bar"),
-			}),
+			}).WithType(cFieldType),
 			cadence.NewArray([]cadence.Value{
 				cadence.String("foo"),
 				cadence.String("bar"),
-			}),
+			}).WithType(dFieldType),
 			cadence.NewAddress([8]byte{0, 0, 0, 0, 0, 1, 0, 2}),
 			cadence.NewBool(true),
 			cadence.Path{
@@ -2526,6 +2570,20 @@ func TestRuntimeComplexStructWithAnyStructFields(t *testing.T) {
 
 	t.Parallel()
 
+	bFieldType := cadence.DictionaryType{
+		KeyType:     cadence.StringType{},
+		ElementType: cadence.AnyStructType{},
+	}
+
+	cFieldType := cadence.VariableSizedArrayType{
+		ElementType: cadence.AnyStructType{},
+	}
+
+	dFieldType := cadence.ConstantSizedArrayType{
+		ElementType: cadence.AnyStructType{},
+		Size:        2,
+	}
+
 	// Complex struct value
 	complexStructValue := cadence.Struct{
 		StructType: &cadence.StructType{
@@ -2540,23 +2598,15 @@ func TestRuntimeComplexStructWithAnyStructFields(t *testing.T) {
 				},
 				{
 					Identifier: "b",
-					Type: cadence.DictionaryType{
-						KeyType:     cadence.StringType{},
-						ElementType: cadence.AnyStructType{},
-					},
+					Type:       bFieldType,
 				},
 				{
 					Identifier: "c",
-					Type: cadence.VariableSizedArrayType{
-						ElementType: cadence.AnyStructType{},
-					},
+					Type:       cFieldType,
 				},
 				{
 					Identifier: "d",
-					Type: cadence.ConstantSizedArrayType{
-						ElementType: cadence.AnyStructType{},
-						Size:        2,
-					},
+					Type:       dFieldType,
 				},
 				{
 					Identifier: "e",
@@ -2572,15 +2622,15 @@ func TestRuntimeComplexStructWithAnyStructFields(t *testing.T) {
 					Key:   cadence.String("name"),
 					Value: cadence.String("Doe"),
 				},
-			}),
+			}).WithType(bFieldType),
 			cadence.NewArray([]cadence.Value{
 				cadence.String("foo"),
 				cadence.String("bar"),
-			}),
+			}).WithType(cFieldType),
 			cadence.NewArray([]cadence.Value{
 				cadence.String("foo"),
 				cadence.String("bar"),
-			}),
+			}).WithType(dFieldType),
 			cadence.Path{
 				Domain:     "storage",
 				Identifier: "foo",
@@ -2932,7 +2982,10 @@ func TestRuntimeImportExportArrayValue(t *testing.T) {
 		require.NoError(t, err)
 
 		assert.Equal(t,
-			cadence.NewArray([]cadence.Value{}),
+			cadence.NewArray([]cadence.Value{}).WithType(
+				cadence.VariableSizedArrayType{
+					ElementType: cadence.AnyStructType{},
+				}),
 			actual,
 		)
 	})
@@ -2989,7 +3042,10 @@ func TestRuntimeImportExportArrayValue(t *testing.T) {
 			cadence.NewArray([]cadence.Value{
 				cadence.NewInt(42),
 				cadence.String("foo"),
-			}),
+			}).WithType(
+				cadence.VariableSizedArrayType{
+					ElementType: cadence.AnyStructType{},
+				}),
 			actual,
 		)
 	})
@@ -3109,7 +3165,11 @@ func TestRuntimeImportExportDictionaryValue(t *testing.T) {
 		require.NoError(t, err)
 
 		assert.Equal(t,
-			cadence.NewDictionary([]cadence.KeyValuePair{}),
+			cadence.NewDictionary([]cadence.KeyValuePair{}).
+				WithType(cadence.DictionaryType{
+					KeyType:     cadence.StringType{},
+					ElementType: cadence.IntType{},
+				}),
 			actual,
 		)
 	})
@@ -3175,6 +3235,9 @@ func TestRuntimeImportExportDictionaryValue(t *testing.T) {
 					Key:   cadence.String("a"),
 					Value: cadence.NewInt(1),
 				},
+			}).WithType(cadence.DictionaryType{
+				KeyType:     cadence.StringType{},
+				ElementType: cadence.IntType{},
 			}),
 			actual,
 		)
@@ -4452,7 +4515,7 @@ func TestRuntimeImportExportComplex(t *testing.T) {
 	externalArrayValue := cadence.NewArray([]cadence.Value{
 		cadence.NewInt(42),
 		cadence.String("foo"),
-	})
+	}).WithType(externalArrayType)
 
 	// Dictionary
 
@@ -4482,7 +4545,7 @@ func TestRuntimeImportExportComplex(t *testing.T) {
 			Key:   cadence.String("a"),
 			Value: externalArrayValue,
 		},
-	})
+	}).WithType(externalDictionaryType)
 
 	// Composite
 
