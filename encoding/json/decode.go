@@ -100,6 +100,8 @@ const (
 	keyKey          = "key"
 	nameKey         = "name"
 	fieldsKey       = "fields"
+	elementsKey     = "elements"
+	entriesKey      = "entries"
 	initializersKey = "initializers"
 	idKey           = "id"
 	targetPathKey   = "targetPath"
@@ -554,19 +556,31 @@ func (d *Decoder) decodeUFix64(valueJSON interface{}) cadence.UFix64 {
 }
 
 func (d *Decoder) decodeArray(valueJSON interface{}) cadence.Array {
-	v := toSlice(valueJSON)
+	v := toObject(valueJSON)
 
 	value, err := cadence.NewMeteredArray(
 		d.gauge,
 		len(v),
 		func() ([]cadence.Value, cadence.ArrayType, error) {
+			// Decode elements
+			elements := toSlice(v.GetValue(d, elementsKey))
 			values := make([]cadence.Value, len(v))
-			for i, val := range v {
+			for i, val := range elements {
 				values[i] = d.decodeJSON(val)
 			}
 
-			// TODO: return array type
-			return values, nil, nil
+			// Decode type
+			typ := v.GetValue(d, staticTypeKey)
+			decodedType := d.decodeType(typ)
+
+			arrayType, ok := decodedType.(cadence.ArrayType)
+			if !ok {
+				return nil,
+					cadence.VariableSizedArrayType{},
+					fmt.Errorf("%s. invalid type for array: `%s`", ErrInvalidJSONCadence, decodedType)
+			}
+
+			return values, arrayType, nil
 		},
 	)
 
@@ -578,20 +592,31 @@ func (d *Decoder) decodeArray(valueJSON interface{}) cadence.Array {
 }
 
 func (d *Decoder) decodeDictionary(valueJSON interface{}) cadence.Dictionary {
-	v := toSlice(valueJSON)
+	v := toObject(valueJSON)
 
 	value, err := cadence.NewMeteredDictionary(
 		d.gauge,
 		len(v),
 		func() ([]cadence.KeyValuePair, cadence.DictionaryType, error) {
+			// Decode entries
+			entries := toSlice(v.GetValue(d, entriesKey))
 			pairs := make([]cadence.KeyValuePair, len(v))
-
-			for i, val := range v {
+			for i, val := range entries {
 				pairs[i] = d.decodeKeyValuePair(val)
 			}
 
-			// TODO: Decode and pass type
-			return pairs, cadence.DictionaryType{}, nil
+			// Decode type
+			typ := v.GetValue(d, staticTypeKey)
+			decodedType := d.decodeType(typ)
+
+			dictionaryType, ok := decodedType.(cadence.DictionaryType)
+			if !ok {
+				return nil,
+					cadence.DictionaryType{},
+					fmt.Errorf("%s. invalid type for dictionary: `%s`", ErrInvalidJSONCadence, decodedType)
+			}
+
+			return pairs, dictionaryType, nil
 		},
 	)
 

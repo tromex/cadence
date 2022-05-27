@@ -110,6 +110,16 @@ type jsonEmptyValueObject struct {
 	Type string `json:"type"`
 }
 
+type jsonArrayValue struct {
+	StaticType jsonValue   `json:"staticType"`
+	Elements   []jsonValue `json:"elements"`
+}
+
+type jsonDictionaryValue struct {
+	StaticType jsonValue            `json:"staticType"`
+	Entries    []jsonDictionaryItem `json:"entries"`
+}
+
 type jsonDictionaryItem struct {
 	Key   jsonValue `json:"key"`
 	Value jsonValue `json:"value"`
@@ -521,8 +531,11 @@ func prepareArray(v cadence.Array) jsonValue {
 	}
 
 	return jsonValueObject{
-		Type:  arrayTypeStr,
-		Value: values,
+		Type: arrayTypeStr,
+		Value: jsonArrayValue{
+			StaticType: prepareType(v.Type()),
+			Elements:   values,
+		},
 	}
 }
 
@@ -537,8 +550,11 @@ func prepareDictionary(v cadence.Dictionary) jsonValue {
 	}
 
 	return jsonValueObject{
-		Type:  dictionaryTypeStr,
-		Value: items,
+		Type: dictionaryTypeStr,
+		Value: jsonDictionaryValue{
+			StaticType: prepareType(v.Type()),
+			Entries:    items,
+		},
 	}
 }
 
