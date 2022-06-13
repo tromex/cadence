@@ -679,6 +679,8 @@ func prepareType(typ cadence.Type, results typeResults) jsonValue {
 		results[typ] = struct{}{}
 	}
 
+	defer delete(results, typ)
+
 	switch typ := typ.(type) {
 	case cadence.AnyType,
 		cadence.AnyStructType,

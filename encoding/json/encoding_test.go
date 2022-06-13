@@ -1846,7 +1846,6 @@ func TestExportTypeValueRecursiveType(t *testing.T) {
 			},
 			`{"type":"Type","value":{"staticType":{"kind":"Resource","typeID":"S.test.Foo","fields":[{"id":"foo","type":{"kind":"Optional","type":"S.test.Foo"}}],"initializers":[],"type":""}}}`,
 		)
-
 	})
 
 	t.Run("non-recursive, repeated", func(t *testing.T) {
@@ -1856,6 +1855,8 @@ func TestExportTypeValueRecursiveType(t *testing.T) {
 		fooTy := &cadence.ResourceType{
 			Location:            utils.TestLocation,
 			QualifiedIdentifier: "Foo",
+			Fields:              []cadence.Field{},
+			Initializers:        [][]cadence.Parameter{},
 		}
 
 		barTy := &cadence.ResourceType{
@@ -1871,15 +1872,20 @@ func TestExportTypeValueRecursiveType(t *testing.T) {
 					Type:       fooTy,
 				},
 			},
+			Initializers: [][]cadence.Parameter{},
 		}
 
-		testEncode(
+		encoded := testEncode(
 			t,
 			cadence.TypeValue{
 				StaticType: barTy,
 			},
-			`{"type":"Type","value":{"staticType":{"kind":"Resource","typeID":"S.test.Bar","fields":[{"id":"foo1","type":{"kind":"Resource","typeID":"S.test.Foo","fields":[],"initializers":[],"type":""}},{"id":"foo2","type":"S.test.Foo"}],"initializers":[],"type":""}}}`,
+			`{"type":"Type","value":{"staticType":{"kind":"Resource","typeID":"S.test.Bar","fields":[{"id":"foo1","type":{"kind":"Resource","typeID":"S.test.Foo","fields":[],"initializers":[],"type":""}},{"id":"foo2","type":{"kind":"Resource","typeID":"S.test.Foo","fields":[],"initializers":[],"type":""}}],"initializers":[],"type":""}}}`,
 		)
+
+		testDecode(t, encoded, cadence.TypeValue{
+			StaticType: barTy,
+		})
 	})
 }
 
