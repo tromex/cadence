@@ -811,3 +811,18 @@ func (NonTransferableValueError) IsUserError() {}
 func (e NonTransferableValueError) Error() string {
 	return "cannot transfer non-transferable value"
 }
+
+// MovedResourceReferenceError is the error which is reported
+// when a reference value is pointing to a moved resource.
+//
+type MovedResourceReferenceError struct {
+	LocationRange
+}
+
+var _ errors.UserError = MovedResourceReferenceError{}
+
+func (MovedResourceReferenceError) IsUserError() {}
+
+func (e MovedResourceReferenceError) Error() string {
+	return "referring resource is moved"
+}
