@@ -16,7 +16,7 @@
  * limitations under the License.
  */
 
-package test
+package test_framework
 
 import (
 	"errors"

@@ -19,7 +19,7 @@
  *
  */
 
-package test
+package test_framework
 
 // ImportResolverNotProvidedError is thrown if the import resolver is not
 // set in the TestRunner, when running tests.
