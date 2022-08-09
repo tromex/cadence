@@ -691,8 +691,9 @@ func TestExecutingTransactions(t *testing.T) {
         `
 
 		runner := NewTestRunner()
-		err := runner.RunTest(code, "test")
+		result, err := runner.RunTest(code, "test")
 		assert.NoError(t, err)
+		assert.NoError(t, result.err)
 	})
 
 	t.Run("run transaction with args", func(t *testing.T) {
@@ -966,6 +967,226 @@ func TestSetupAndTearDown(t *testing.T) {
 		result := results[0]
 		assert.Equal(t, result.testName, "testFunc")
 		assert.NoError(t, result.err)
+	})
+}
+
+func TestDeployingContracts(t *testing.T) {
+	t.Parallel()
+
+	t.Run("no args", func(t *testing.T) {
+		t.Parallel()
+
+		code := `
+            import Test
+
+            pub fun test() {
+                let blockchain = Test.newEmulatorBlockchain()
+                let account = blockchain.createAccount()
+
+                let contractCode = "pub contract Foo{ init(){}  pub fun sayHello(): String { return \"hello from Foo\"} }"
+
+                let err = blockchain.deployContract(
+                    "Foo",
+                    contractCode,
+                    account.address,
+                    [account],
+                    [],
+                )
+
+                if err != nil {
+                    panic(err!.message)
+                }
+
+                var script = "import Foo from ".concat(account.address.toString()).concat("\n")
+                script = script.concat("pub fun main(): String {  return Foo.sayHello() }")
+
+                let result = blockchain.executeScript(script, [])
+
+                if result.status != Test.ResultStatus.succeeded {
+                    panic(result.error!.message)
+                }
+
+                let returnedStr = result.returnValue! as! String
+                assert(returnedStr == "hello from Foo", message: "found: ".concat(returnedStr))
+            }
+        `
+
+		runner := NewTestRunner()
+		result, err := runner.RunTest(code, "test")
+		assert.NoError(t, err)
+		assert.NoError(t, result.err)
+	})
+
+	t.Run("with args", func(t *testing.T) {
+		t.Parallel()
+
+		code := `
+            import Test
+
+            pub fun test() {
+                let blockchain = Test.newEmulatorBlockchain()
+                let account = blockchain.createAccount()
+
+                let contractCode = "pub contract Foo{ pub let msg: String;   init(_ msg: String){ self.msg = msg }   pub fun sayHello(): String { return self.msg } }" 
+
+                let err = blockchain.deployContract(
+                    "Foo",
+                    contractCode,
+                    account.address,
+                    [account],
+                    ["hello from args"],
+                )
+
+                if err != nil {
+                    panic(err!.message)
+                }
+
+                var script = "import Foo from ".concat(account.address.toString()).concat("\n")
+                script = script.concat("pub fun main(): String {  return Foo.sayHello() }")
+
+                let result = blockchain.executeScript(script, [])
+
+                if result.status != Test.ResultStatus.succeeded {
+                    panic(result.error!.message)
+                }
+
+                let returnedStr = result.returnValue! as! String
+                assert(returnedStr == "hello from args", message: "found: ".concat(returnedStr))
+            }
+        `
+
+		runner := NewTestRunner()
+		result, err := runner.RunTest(code, "test")
+		assert.NoError(t, err)
+		assert.NoError(t, result.err)
+	})
+
+	t.Run("without signers", func(t *testing.T) {
+		t.Parallel()
+
+		code := `
+            import Test
+
+            pub fun test() {
+                let blockchain = Test.newEmulatorBlockchain()
+                let account = blockchain.createAccount()
+
+                let contractCode = "pub contract Foo{ init(){} }"
+
+                let err = blockchain.deployContract(
+                    "Foo",
+                    contractCode,
+                    account.address,
+                    [],
+                    [],
+                )
+
+                if err != nil {
+                    panic(err!.message)
+                }
+            }
+        `
+
+		runner := NewTestRunner()
+		result, err := runner.RunTest(code, "test")
+		require.NoError(t, err)
+		require.Error(t, result.err)
+		assert.Contains(t, result.err.Error(), "authorization failed for account")
+	})
+}
+
+func TestErrors(t *testing.T) {
+	t.Parallel()
+
+	t.Run("contract deployment error", func(t *testing.T) {
+		t.Parallel()
+
+		code := `
+            import Test
+
+            pub fun test() {
+                let blockchain = Test.newEmulatorBlockchain()
+                let account = blockchain.createAccount()
+
+                let contractCode = "pub contract Foo{ init(){}  pub fun sayHello() { return 0 } }"
+
+                let err = blockchain.deployContract(
+                    "Foo",
+                    contractCode,
+                    account.address,
+                    [account],
+                    [],
+                )
+
+                if err != nil {
+                    panic(err!.message)
+                }
+            }
+        `
+
+		runner := NewTestRunner()
+		result, err := runner.RunTest(code, "test")
+		require.NoError(t, err)
+		require.Error(t, result.err)
+		assert.Contains(t, result.err.Error(), "cannot deploy invalid contract")
+	})
+
+	t.Run("script error", func(t *testing.T) {
+		t.Parallel()
+
+		code := `
+            import Test
+
+            pub fun test() {
+                let blockchain = Test.newEmulatorBlockchain()
+                let account = blockchain.createAccount()
+
+                let script = "import Foo from 0x01; pub fun main() {}"
+                let result = blockchain.executeScript(script, [])
+
+                if result.status == Test.ResultStatus.failed {
+                    panic(result.error!.message)
+                }
+            }
+        `
+
+		runner := NewTestRunner()
+		result, err := runner.RunTest(code, "test")
+		require.NoError(t, err)
+		require.Error(t, result.err)
+		assert.Contains(t, result.err.Error(), "cannot find declaration `Foo`")
+	})
+
+	t.Run("transaction error", func(t *testing.T) {
+		t.Parallel()
+
+		code := `
+            import Test
+
+            pub fun test() {
+                let blockchain = Test.newEmulatorBlockchain()
+                let account = blockchain.createAccount()
+
+                let tx2 = Test.Transaction(
+                    "transaction { execute{ panic(\"some error\") } }",
+                    nil,
+                    [account],
+                    [],
+                )
+
+                let result = blockchain.executeTransaction(tx2)!
+
+                if result.status == Test.ResultStatus.failed {
+                    panic(result.error!.message)
+                }
+            }
+        `
+
+		runner := NewTestRunner()
+		result, err := runner.RunTest(code, "test")
+		require.NoError(t, err)
+		require.Error(t, result.err)
+		assert.Contains(t, result.err.Error(), "panic: some error")
 	})
 }
 
