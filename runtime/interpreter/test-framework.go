@@ -54,6 +54,8 @@ type TestFramework interface {
 		authorizer common.Address,
 		signers []*Account,
 	) error
+
+	ReadFile(string) (string, error)
 }
 
 type ScriptResult struct {
