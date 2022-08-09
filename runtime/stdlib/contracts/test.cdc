@@ -1,9 +1,27 @@
-// Test contract is the standard library that provides testing functionality in Cadence.
-//
-// TODO: Name is yet to be finalized
-//
+/// Test contract is the standard library that provides testing functionality in Cadence.
+///
+/// TODO: Name is yet to be finalized
+///
 pub contract Test {
 
+    /// Convenient function to fail a test.
+    /// Is equivalent to calling `assert(false)`.
+    ///
+    pub fun fail() {
+        assert(false)
+    }
+
+    pub struct interface Matcher {
+
+        pub fun test(_ value: Any): Bool
+
+        pub fun and(_ other: AnyStruct{Matcher}): AnyStruct{Matcher}
+
+        pub fun or(_ other: AnyStruct{Matcher}): AnyStruct{Matcher}
+    }
+
+    /// Blockchain emulates a real network.
+    ///
     pub struct Blockchain {
 
         pub let backend: AnyStruct{BlockchainBackend}
@@ -12,43 +30,43 @@ pub contract Test {
             self.backend = backend
         }
 
-        // Executes a script and returns the script return value and the status.
-        // `returnValue` field of the result will be `nil` if the script failed.
-        //
+        /// Executes a script and returns the script return value and the status.
+        /// `returnValue` field of the result will be `nil` if the script failed.
+        ///
         pub fun executeScript(_ script: String, _ args: [AnyStruct]): ScriptResult {
             return self.backend.executeScript(script, args)
         }
 
-        // Creates a signer account by submitting an account creation transaction.
-        // The transaction is paid by the service account.
-        // The returned account can be used to sign and authorize transactions.
-        //
+        /// Creates a signer account by submitting an account creation transaction.
+        /// The transaction is paid by the service account.
+        /// The returned account can be used to sign and authorize transactions.
+        ///
         pub fun createAccount(): Account {
             return self.backend.createAccount()
         }
 
-        // Add a transaction to the current block.
-        //
+        /// Add a transaction to the current block.
+        ///
         pub fun addTransaction(_ tx: Transaction) {
             self.backend.addTransaction(tx)
         }
 
-        // Executes the next transaction in the block, if any.
-        // Returns the result of the transaction, or nil if no transaction was scheduled.
-        //
+        /// Executes the next transaction in the block, if any.
+        /// Returns the result of the transaction, or nil if no transaction was scheduled.
+        ///
         pub fun executeNextTransaction(): TransactionResult? {
             return self.backend.executeNextTransaction()
         }
 
-        // Commit the current block.
-        // Committing will fail if there are un-executed transactions in the block.
-        //
+        /// Commit the current block.
+        /// Committing will fail if there are un-executed transactions in the block.
+        ///
         pub fun commitBlock() {
             self.backend.commitBlock()
         }
 
-        // Executes a given transaction and commit the current block.
-        //
+        /// Executes a given transaction and commit the current block.
+        ///
         pub fun executeTransaction(_ transaction: Transaction): TransactionResult {
             self.addTransaction(transaction)
             let txResult = self.executeNextTransaction()!
@@ -56,8 +74,8 @@ pub contract Test {
             return txResult
         }
 
-        // Executes a given set of transactions and commit the current block.
-        //
+        /// Executes a given set of transactions and commit the current block.
+        ///
         pub fun executeTransactions(_ transactions: [Transaction]): [TransactionResult] {
             for tx in transactions {
                 self.addTransaction(tx)
@@ -74,15 +92,15 @@ pub contract Test {
         }
     }
 
-    // ResultStatus indicates status of a transaction or script execution.
-    //
+    /// ResultStatus indicates status of a transaction or script execution.
+    ///
     pub enum ResultStatus: UInt8 {
         pub case succeeded
         pub case failed
     }
 
-    // The result of a transaction execution.
-    //
+    /// The result of a transaction execution.
+    ///
     pub struct TransactionResult {
         pub let status: ResultStatus
 
@@ -91,8 +109,8 @@ pub contract Test {
         }
     }
 
-    // The result of a script execution.
-    //
+    /// The result of a script execution.
+    ///
     pub struct ScriptResult {
         pub let status:      ResultStatus
         pub let returnValue: AnyStruct?
@@ -103,8 +121,8 @@ pub contract Test {
         }
     }
 
-    // Account represents a user account in the blockchain.
-    //
+    /// Account represents a user account in the blockchain.
+    ///
     pub struct Account {
         pub let address:    Address
         pub let accountKey: AccountKey
@@ -117,8 +135,8 @@ pub contract Test {
         }
     }
 
-    // Transaction that can be submitted and executed on the blockchain.
-    //
+    /// Transaction that can be submitted and executed on the blockchain.
+    ///
     pub struct Transaction {
         pub let code:       String
         pub let authorizer: Address?
@@ -133,8 +151,8 @@ pub contract Test {
         }
     }
 
-    // BlockchainBackend is the interface to be implemented by the backend providers.
-    //
+    /// BlockchainBackend is the interface to be implemented by the backend providers.
+    ///
     pub struct interface BlockchainBackend {
 
         pub fun executeScript(_ script: String, _ args: [AnyStruct]): ScriptResult
