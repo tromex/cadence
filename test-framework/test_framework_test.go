@@ -1141,7 +1141,7 @@ func TestErrors(t *testing.T) {
                 let blockchain = Test.newEmulatorBlockchain()
                 let account = blockchain.createAccount()
 
-                let script = "import Foo from 0x01; pub fun main() {}"
+                let script = "import Foo from ".concat(account.address.toString()).concat("; pub fun main() {}")
                 let result = blockchain.executeScript(script, [])
 
                 if result.status == Test.ResultStatus.failed {

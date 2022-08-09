@@ -21,6 +21,7 @@ package test_framework
 import (
 	"context"
 	"fmt"
+	"github.com/onflow/flow-go/fvm/meter"
 	"math"
 	"strings"
 
@@ -407,10 +408,22 @@ func newScriptEnvironment() *fvm.ScriptEnv {
 	view := testutil.RootBootstrappedLedger(vm, ctx)
 	v := view.NewChild()
 
-	st := state.NewState(v, state.WithMaxInteractionSizeAllowed(math.MaxUint64))
+	st := state.NewState(
+		v,
+		meter.NewMeter(math.MaxUint64, math.MaxUint64),
+		state.WithMaxKeySizeAllowed(ctx.MaxStateKeySize),
+		state.WithMaxValueSizeAllowed(ctx.MaxStateValueSize),
+		state.WithMaxInteractionSizeAllowed(ctx.MaxStateInteractionSize),
+	)
+
 	sth := state.NewStateHolder(st)
 
-	return fvm.NewScriptEnvironment(context.Background(), ctx, vm, sth, emptyPrograms)
+	env, err := fvm.NewScriptEnvironment(context.Background(), ctx, vm, sth, emptyPrograms)
+	if err != nil {
+		panic(err)
+	}
+
+	return env
 }
 
 func (r *TestRunner) parseAndCheckImport(location common.Location, startCtx runtime.Context) (*ast.Program, *sema.Elaboration, error) {

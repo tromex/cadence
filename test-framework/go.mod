@@ -3,10 +3,10 @@ module github.com/onflow/cadence/test-framework
 go 1.18
 
 require (
-	github.com/onflow/cadence v0.25.0
-	github.com/onflow/flow-emulator v0.33.4-0.20220804222756-7078200acbb7
-	github.com/onflow/flow-go v0.27.1
-	github.com/onflow/flow-go-sdk v0.26.6-0.20220809205553-d7566a8fce37
+	github.com/onflow/cadence v0.25.1-0.20220809220516-35f2486ed7c3
+	github.com/onflow/flow-emulator v0.33.5-0.20220809221047-7847cba6d095
+	github.com/onflow/flow-go v0.27.2-0.20220809220844-c4d2437a9d5b
+	github.com/onflow/flow-go-sdk v0.26.6-0.20220809220713-766b76677a67
 	github.com/rs/zerolog v1.26.1
 	github.com/stretchr/testify v1.8.0
 )
@@ -68,7 +68,6 @@ require (
 	github.com/onflow/flow-go/crypto v0.24.4 // indirect
 	github.com/onflow/flow/protobuf/go/flow v0.3.1 // indirect
 	github.com/onflow/sdks v0.4.4 // indirect
-	github.com/opentracing/opentracing-go v1.2.0 // indirect
 	github.com/pelletier/go-toml v1.9.5 // indirect
 	github.com/pelletier/go-toml/v2 v2.0.2 // indirect
 	github.com/pkg/errors v0.9.1 // indirect
