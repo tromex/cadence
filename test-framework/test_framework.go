@@ -21,7 +21,6 @@ package test_framework
 import (
 	"context"
 	"fmt"
-	"github.com/onflow/flow-go/fvm/meter"
 	"math"
 	"strings"
 
@@ -29,6 +28,7 @@ import (
 
 	"github.com/onflow/flow-go/engine/execution/testutil"
 	"github.com/onflow/flow-go/fvm"
+	"github.com/onflow/flow-go/fvm/meter"
 	"github.com/onflow/flow-go/fvm/programs"
 	"github.com/onflow/flow-go/fvm/state"
 
@@ -60,8 +60,8 @@ var testScriptLocation = common.NewScriptLocation(nil, []byte("test"))
 type Results []Result
 
 type Result struct {
-	testName string
-	err      error
+	TestName string
+	Error    error
 }
 
 // ImportResolver is used to resolve and get the source code for imports.
@@ -113,8 +113,8 @@ func (r *TestRunner) RunTest(script string, funcName string) (result *Result, er
 	err = r.runTestTearDown(inter)
 
 	return &Result{
-		testName: funcName,
-		err:      testResult,
+		TestName: funcName,
+		Error:    testResult,
 	}, err
 }
 
@@ -150,8 +150,8 @@ func (r *TestRunner) RunTests(script string) (results Results, err error) {
 		err := r.invokeTestFunction(inter, funcName)
 
 		results = append(results, Result{
-			testName: funcName,
-			err:      err,
+			TestName: funcName,
+			Error:    err,
 		})
 	}
 
@@ -469,17 +469,21 @@ func (r *TestRunner) parseAndCheckImport(location common.Location, startCtx runt
 //
 func PrettyPrintResults(results Results) string {
 	var sb strings.Builder
-	sb.WriteString("Test Results\n")
+	sb.WriteString("Test results:\n")
 	for _, result := range results {
-		sb.WriteString(PrettyPrintResult(result.testName, result.err))
+		sb.WriteString(PrettyPrintResult(result.TestName, result.Error))
+		sb.WriteRune('\n')
 	}
 	return sb.String()
 }
 
 func PrettyPrintResult(funcName string, err error) string {
 	if err == nil {
-		return fmt.Sprintf("- PASS: %s\n", funcName)
+		return fmt.Sprintf("- PASS: %s", funcName)
 	}
 
-	return fmt.Sprintf("- FAIL: %s\n\t\t%s\n", funcName, err.Error())
+	// Indent the error messages
+	errString := strings.ReplaceAll(err.Error(), "\n", "\n\t\t\t")
+
+	return fmt.Sprintf("- FAIL: %s\n\t\t%s", funcName, errString)
 }
