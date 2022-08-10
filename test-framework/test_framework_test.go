@@ -988,8 +988,7 @@ func TestDeployingContracts(t *testing.T) {
                 let err = blockchain.deployContract(
                     "Foo",
                     contractCode,
-                    account.address,
-                    [account],
+                    account,
                     [],
                 )
 
@@ -1032,8 +1031,7 @@ func TestDeployingContracts(t *testing.T) {
                 let err = blockchain.deployContract(
                     "Foo",
                     contractCode,
-                    account.address,
-                    [account],
+                    account,
                     ["hello from args"],
                 )
 
@@ -1060,39 +1058,6 @@ func TestDeployingContracts(t *testing.T) {
 		assert.NoError(t, err)
 		assert.NoError(t, result.Error)
 	})
-
-	t.Run("without signers", func(t *testing.T) {
-		t.Parallel()
-
-		code := `
-            import Test
-
-            pub fun test() {
-                let blockchain = Test.newEmulatorBlockchain()
-                let account = blockchain.createAccount()
-
-                let contractCode = "pub contract Foo{ init(){} }"
-
-                let err = blockchain.deployContract(
-                    "Foo",
-                    contractCode,
-                    account.address,
-                    [],
-                    [],
-                )
-
-                if err != nil {
-                    panic(err!.message)
-                }
-            }
-        `
-
-		runner := NewTestRunner()
-		result, err := runner.RunTest(code, "test")
-		require.NoError(t, err)
-		require.Error(t, result.Error)
-		assert.Contains(t, result.Error.Error(), "authorization failed for account")
-	})
 }
 
 func TestErrors(t *testing.T) {
@@ -1113,8 +1078,7 @@ func TestErrors(t *testing.T) {
                 let err = blockchain.deployContract(
                     "Foo",
                     contractCode,
-                    account.address,
-                    [account],
+                    account,
                     [],
                 )
 
@@ -1219,7 +1183,7 @@ func TestPrettyPrintTestResults(t *testing.T) {
 
 	resultsStr := PrettyPrintResults(results)
 
-	expected := `Test Results
+	expected := `Test results:
 - PASS: testFunc1
 - FAIL: testFunc2
 		assertion failed: "unexpected error occurred"
