@@ -53,12 +53,12 @@ func TestRunningMultipleTests(t *testing.T) {
 	require.Len(t, results, 2)
 
 	result1 := results[0]
-	assert.Equal(t, result1.testName, "testFunc1")
-	assert.Error(t, result1.err)
+	assert.Equal(t, result1.TestName, "testFunc1")
+	assert.Error(t, result1.Error)
 
 	result2 := results[1]
-	assert.Equal(t, result2.testName, "testFunc2")
-	assert.NoError(t, result2.err)
+	assert.Equal(t, result2.TestName, "testFunc2")
+	assert.NoError(t, result2.Error)
 }
 
 func TestRunningSingleTest(t *testing.T) {
@@ -78,11 +78,11 @@ func TestRunningSingleTest(t *testing.T) {
 
 	result, err := runner.RunTest(code, "testFunc1")
 	assert.NoError(t, err)
-	assert.Error(t, result.err)
+	assert.Error(t, result.Error)
 
 	result, err = runner.RunTest(code, "testFunc2")
 	assert.NoError(t, err)
-	assert.NoError(t, result.err)
+	assert.NoError(t, result.Error)
 }
 
 func TestAssertFunction(t *testing.T) {
@@ -112,21 +112,21 @@ func TestAssertFunction(t *testing.T) {
 
 	result, err := runner.RunTest(code, "testAssertWithNoArgs")
 	assert.NoError(t, err)
-	assert.NoError(t, result.err)
+	assert.NoError(t, result.Error)
 
 	result, err = runner.RunTest(code, "testAssertWithNoArgsFail")
 	assert.NoError(t, err)
-	require.Error(t, result.err)
-	assert.Equal(t, result.err.Error(), "assertion failed")
+	require.Error(t, result.Error)
+	assert.Equal(t, result.Error.Error(), "assertion failed")
 
 	result, err = runner.RunTest(code, "testAssertWithMessage")
 	assert.NoError(t, err)
-	assert.NoError(t, result.err)
+	assert.NoError(t, result.Error)
 
 	result, err = runner.RunTest(code, "testAssertWithMessageFail")
 	assert.NoError(t, err)
-	require.Error(t, result.err)
-	assert.Contains(t, result.err.Error(), "assertion failed: some reason")
+	require.Error(t, result.Error)
+	assert.Contains(t, result.Error.Error(), "assertion failed: some reason")
 }
 
 func TestExecuteScript(t *testing.T) {
@@ -150,7 +150,7 @@ func TestExecuteScript(t *testing.T) {
 		runner := NewTestRunner()
 		result, err := runner.RunTest(code, "test")
 		assert.NoError(t, err)
-		assert.NoError(t, result.err)
+		assert.NoError(t, result.Error)
 	})
 
 	t.Run("with args", func(t *testing.T) {
@@ -173,7 +173,7 @@ func TestExecuteScript(t *testing.T) {
 		runner := NewTestRunner()
 		result, err := runner.RunTest(code, "test")
 		assert.NoError(t, err)
-		assert.NoError(t, result.err)
+		assert.NoError(t, result.Error)
 	})
 }
 
@@ -211,7 +211,7 @@ func TestImportContract(t *testing.T) {
 
 		result, err := runner.RunTest(code, "test")
 		assert.NoError(t, err)
-		assert.NoError(t, result.err)
+		assert.NoError(t, result.Error)
 	})
 
 	t.Run("init with params", func(t *testing.T) {
@@ -250,7 +250,7 @@ func TestImportContract(t *testing.T) {
 
 		result, err := runner.RunTest(code, "test")
 		assert.NoError(t, err)
-		assert.NoError(t, result.err)
+		assert.NoError(t, result.Error)
 	})
 
 	t.Run("invalid import", func(t *testing.T) {
@@ -371,9 +371,9 @@ func TestUsingEnv(t *testing.T) {
 		result, err := runner.RunTest(code, "test")
 		require.NoError(t, err)
 
-		require.Error(t, result.err)
+		require.Error(t, result.Error)
 		publicKeyError := interpreter.InvalidPublicKeyError{}
-		assert.ErrorAs(t, result.err, &publicKeyError)
+		assert.ErrorAs(t, result.Error, &publicKeyError)
 	})
 
 	t.Run("public account", func(t *testing.T) {
@@ -390,7 +390,7 @@ func TestUsingEnv(t *testing.T) {
 		runner := NewTestRunner()
 		result, err := runner.RunTest(code, "test")
 		assert.NoError(t, err)
-		assert.NoError(t, result.err)
+		assert.NoError(t, result.Error)
 	})
 
 	t.Run("auth account", func(t *testing.T) {
@@ -407,7 +407,7 @@ func TestUsingEnv(t *testing.T) {
 		runner := NewTestRunner()
 		result, err := runner.RunTest(code, "test")
 		assert.NoError(t, err)
-		assert.NoError(t, result.err)
+		assert.NoError(t, result.Error)
 	})
 
 	// Imported programs also should have the access to the env.
@@ -443,7 +443,7 @@ func TestUsingEnv(t *testing.T) {
 
 		result, err := runner.RunTest(code, "test")
 		assert.NoError(t, err)
-		assert.NoError(t, result.err)
+		assert.NoError(t, result.Error)
 	})
 }
 
@@ -462,7 +462,7 @@ func TestCreateAccount(t *testing.T) {
 	runner := NewTestRunner()
 	result, err := runner.RunTest(code, "test")
 	assert.NoError(t, err)
-	assert.NoError(t, result.err)
+	assert.NoError(t, result.Error)
 }
 
 func TestExecutingTransactions(t *testing.T) {
@@ -492,7 +492,7 @@ func TestExecutingTransactions(t *testing.T) {
 		runner := NewTestRunner()
 		result, err := runner.RunTest(code, "test")
 		assert.NoError(t, err)
-		assert.NoError(t, result.err)
+		assert.NoError(t, result.Error)
 	})
 
 	t.Run("run next transaction", func(t *testing.T) {
@@ -522,7 +522,7 @@ func TestExecutingTransactions(t *testing.T) {
 		runner := NewTestRunner()
 		result, err := runner.RunTest(code, "test")
 		assert.NoError(t, err)
-		assert.NoError(t, result.err)
+		assert.NoError(t, result.Error)
 	})
 
 	t.Run("run next transaction with authorizer", func(t *testing.T) {
@@ -552,7 +552,7 @@ func TestExecutingTransactions(t *testing.T) {
 		runner := NewTestRunner()
 		result, err := runner.RunTest(code, "test")
 		assert.NoError(t, err)
-		assert.NoError(t, result.err)
+		assert.NoError(t, result.Error)
 	})
 
 	t.Run("transaction failure", func(t *testing.T) {
@@ -582,7 +582,7 @@ func TestExecutingTransactions(t *testing.T) {
 		runner := NewTestRunner()
 		result, err := runner.RunTest(code, "test")
 		assert.NoError(t, err)
-		assert.NoError(t, result.err)
+		assert.NoError(t, result.Error)
 	})
 
 	t.Run("run non existing transaction", func(t *testing.T) {
@@ -601,7 +601,7 @@ func TestExecutingTransactions(t *testing.T) {
 		runner := NewTestRunner()
 		result, err := runner.RunTest(code, "test")
 		assert.NoError(t, err)
-		assert.NoError(t, result.err)
+		assert.NoError(t, result.Error)
 	})
 
 	t.Run("commit block", func(t *testing.T) {
@@ -619,7 +619,7 @@ func TestExecutingTransactions(t *testing.T) {
 		runner := NewTestRunner()
 		result, err := runner.RunTest(code, "test")
 		assert.NoError(t, err)
-		assert.NoError(t, result.err)
+		assert.NoError(t, result.Error)
 	})
 
 	t.Run("commit un-executed block", func(t *testing.T) {
@@ -649,8 +649,8 @@ func TestExecutingTransactions(t *testing.T) {
 		result, err := runner.RunTest(code, "test")
 		require.NoError(t, err)
 
-		require.Error(t, result.err)
-		assert.Contains(t, result.err.Error(), "cannot be committed before execution")
+		require.Error(t, result.Error)
+		assert.Contains(t, result.Error.Error(), "cannot be committed before execution")
 	})
 
 	t.Run("commit partially executed block", func(t *testing.T) {
@@ -686,8 +686,8 @@ func TestExecutingTransactions(t *testing.T) {
 		result, err := runner.RunTest(code, "test")
 		require.NoError(t, err)
 
-		require.Error(t, result.err)
-		assert.Contains(t, result.err.Error(), "is currently being executed")
+		require.Error(t, result.Error)
+		assert.Contains(t, result.Error.Error(), "is currently being executed")
 	})
 
 	t.Run("multiple commit block", func(t *testing.T) {
@@ -706,7 +706,7 @@ func TestExecutingTransactions(t *testing.T) {
 		runner := NewTestRunner()
 		result, err := runner.RunTest(code, "test")
 		assert.NoError(t, err)
-		assert.NoError(t, result.err)
+		assert.NoError(t, result.Error)
 	})
 
 	t.Run("run given transaction", func(t *testing.T) {
@@ -734,7 +734,7 @@ func TestExecutingTransactions(t *testing.T) {
 		runner := NewTestRunner()
 		result, err := runner.RunTest(code, "test")
 		assert.NoError(t, err)
-		assert.NoError(t, result.err)
+		assert.NoError(t, result.Error)
 	})
 
 	t.Run("run transaction with args", func(t *testing.T) {
@@ -762,7 +762,7 @@ func TestExecutingTransactions(t *testing.T) {
 		runner := NewTestRunner()
 		result, err := runner.RunTest(code, "test")
 		assert.NoError(t, err)
-		assert.NoError(t, result.err)
+		assert.NoError(t, result.Error)
 	})
 
 	t.Run("run transaction with multiple authorizers", func(t *testing.T) {
@@ -791,7 +791,7 @@ func TestExecutingTransactions(t *testing.T) {
 		runner := NewTestRunner()
 		result, err := runner.RunTest(code, "test")
 		assert.NoError(t, err)
-		assert.NoError(t, result.err)
+		assert.NoError(t, result.Error)
 	})
 
 	t.Run("run given transaction unsuccessful", func(t *testing.T) {
@@ -819,7 +819,7 @@ func TestExecutingTransactions(t *testing.T) {
 		runner := NewTestRunner()
 		result, err := runner.RunTest(code, "test")
 		assert.NoError(t, err)
-		assert.NoError(t, result.err)
+		assert.NoError(t, result.Error)
 	})
 
 	t.Run("run multiple transactions", func(t *testing.T) {
@@ -874,7 +874,7 @@ func TestExecutingTransactions(t *testing.T) {
 		runner := NewTestRunner()
 		result, err := runner.RunTest(code, "test")
 		assert.NoError(t, err)
-		assert.NoError(t, result.err)
+		assert.NoError(t, result.Error)
 	})
 
 	t.Run("run empty transactions", func(t *testing.T) {
@@ -895,7 +895,7 @@ func TestExecutingTransactions(t *testing.T) {
 		runner := NewTestRunner()
 		result, err := runner.RunTest(code, "test")
 		assert.NoError(t, err)
-		assert.NoError(t, result.err)
+		assert.NoError(t, result.Error)
 	})
 
 	t.Run("run transaction with pending transactions", func(t *testing.T) {
@@ -933,8 +933,8 @@ func TestExecutingTransactions(t *testing.T) {
 		result, err := runner.RunTest(code, "test")
 		require.NoError(t, err)
 
-		require.Error(t, result.err)
-		assert.Contains(t, result.err.Error(), "is currently being executed")
+		require.Error(t, result.Error)
+		assert.Contains(t, result.Error.Error(), "is currently being executed")
 	})
 }
 
@@ -963,8 +963,8 @@ func TestSetupAndTearDown(t *testing.T) {
 
 		require.Len(t, results, 1)
 		result := results[0]
-		assert.Equal(t, result.testName, "testFunc")
-		assert.NoError(t, result.err)
+		assert.Equal(t, result.TestName, "testFunc")
+		assert.NoError(t, result.Error)
 	})
 
 	t.Run("setup failed", func(t *testing.T) {
@@ -1007,8 +1007,8 @@ func TestSetupAndTearDown(t *testing.T) {
 
 		require.Len(t, results, 1)
 		result := results[0]
-		assert.Equal(t, result.testName, "testFunc")
-		assert.NoError(t, result.err)
+		assert.Equal(t, result.TestName, "testFunc")
+		assert.NoError(t, result.Error)
 	})
 
 	t.Run("teardown failed", func(t *testing.T) {
@@ -1035,8 +1035,8 @@ func TestSetupAndTearDown(t *testing.T) {
 		// However, test cases should have been passed.
 		require.Len(t, results, 1)
 		result := results[0]
-		assert.Equal(t, result.testName, "testFunc")
-		assert.NoError(t, result.err)
+		assert.Equal(t, result.TestName, "testFunc")
+		assert.NoError(t, result.Error)
 	})
 }
 
@@ -1124,7 +1124,7 @@ func TestLoadingProgramsFromLocalFile(t *testing.T) {
 
 		result, err := runner.RunTest(code, "test")
 		assert.NoError(t, err)
-		assert.NoError(t, result.err)
+		assert.NoError(t, result.Error)
 
 		assert.True(t, resolverInvoked)
 	})
@@ -1163,8 +1163,8 @@ func TestLoadingProgramsFromLocalFile(t *testing.T) {
 
 		result, err := runner.RunTest(code, "test")
 		require.NoError(t, err)
-		require.Error(t, result.err)
-		assert.Contains(t, result.err.Error(), "cannot find file ./sample/script.cdc")
+		require.Error(t, result.Error)
+		assert.Contains(t, result.Error.Error(), "cannot find file ./sample/script.cdc")
 
 		assert.True(t, resolverInvoked)
 	})
@@ -1187,8 +1187,8 @@ func TestLoadingProgramsFromLocalFile(t *testing.T) {
 
 		result, err := runner.RunTest(code, "test")
 		require.NoError(t, err)
-		require.Error(t, result.err)
-		assert.ErrorAs(t, result.err, &ImportResolverNotProvidedError{})
+		require.Error(t, result.Error)
+		assert.ErrorAs(t, result.Error, &ImportResolverNotProvidedError{})
 	})
 }
 
@@ -1235,7 +1235,7 @@ func TestDeployingContracts(t *testing.T) {
 		runner := NewTestRunner()
 		result, err := runner.RunTest(code, "test")
 		assert.NoError(t, err)
-		assert.NoError(t, result.err)
+		assert.NoError(t, result.Error)
 	})
 
 	t.Run("with args", func(t *testing.T) {
@@ -1278,7 +1278,7 @@ func TestDeployingContracts(t *testing.T) {
 		runner := NewTestRunner()
 		result, err := runner.RunTest(code, "test")
 		assert.NoError(t, err)
-		assert.NoError(t, result.err)
+		assert.NoError(t, result.Error)
 	})
 }
 
@@ -1313,8 +1313,8 @@ func TestErrors(t *testing.T) {
 		runner := NewTestRunner()
 		result, err := runner.RunTest(code, "test")
 		require.NoError(t, err)
-		require.Error(t, result.err)
-		assert.Contains(t, result.err.Error(), "cannot deploy invalid contract")
+		require.Error(t, result.Error)
+		assert.Contains(t, result.Error.Error(), "cannot deploy invalid contract")
 	})
 
 	t.Run("script error", func(t *testing.T) {
@@ -1339,8 +1339,8 @@ func TestErrors(t *testing.T) {
 		runner := NewTestRunner()
 		result, err := runner.RunTest(code, "test")
 		require.NoError(t, err)
-		require.Error(t, result.err)
-		assert.Contains(t, result.err.Error(), "account not found for address")
+		require.Error(t, result.Error)
+		assert.Contains(t, result.Error.Error(), "account not found for address")
 	})
 
 	t.Run("transaction error", func(t *testing.T) {
@@ -1371,8 +1371,8 @@ func TestErrors(t *testing.T) {
 		runner := NewTestRunner()
 		result, err := runner.RunTest(code, "test")
 		require.NoError(t, err)
-		require.Error(t, result.err)
-		assert.Contains(t, result.err.Error(), "panic: some error")
+		require.Error(t, result.Error)
+		assert.Contains(t, result.Error.Error(), "panic: some error")
 	})
 }
 
@@ -1390,8 +1390,8 @@ func TestInterpretFailFunction(t *testing.T) {
 	runner := NewTestRunner()
 	result, err := runner.RunTest(script, "test")
 	require.NoError(t, err)
-	require.Error(t, result.err)
-	assert.ErrorAs(t, result.err, &stdlib.AssertionError{})
+	require.Error(t, result.Error)
+	assert.ErrorAs(t, result.Error, &stdlib.AssertionError{})
 }
 
 func TestInterpretMatcher(t *testing.T) {
@@ -1420,7 +1420,7 @@ func TestInterpretMatcher(t *testing.T) {
 		runner := NewTestRunner()
 		result, err := runner.RunTest(script, "test")
 		require.NoError(t, err)
-		require.NoError(t, result.err)
+		require.NoError(t, result.Error)
 	})
 
 	t.Run("custom matcher primitive type", func(t *testing.T) {
@@ -1442,7 +1442,7 @@ func TestInterpretMatcher(t *testing.T) {
 		runner := NewTestRunner()
 		result, err := runner.RunTest(script, "test")
 		require.NoError(t, err)
-		require.NoError(t, result.err)
+		require.NoError(t, result.Error)
 	})
 
 	t.Run("custom matcher invalid type usage", func(t *testing.T) {
@@ -1465,8 +1465,8 @@ func TestInterpretMatcher(t *testing.T) {
 		runner := NewTestRunner()
 		result, err := runner.RunTest(script, "test")
 		require.NoError(t, err)
-		require.Error(t, result.err)
-		assert.ErrorAs(t, result.err, &interpreter.TypeMismatchError{})
+		require.Error(t, result.Error)
+		assert.ErrorAs(t, result.Error, &interpreter.TypeMismatchError{})
 	})
 
 	t.Run("custom resource matcher", func(t *testing.T) {
@@ -1500,7 +1500,7 @@ func TestInterpretMatcher(t *testing.T) {
 		runner := NewTestRunner()
 		result, err := runner.RunTest(script, "test")
 		require.NoError(t, err)
-		require.NoError(t, result.err)
+		require.NoError(t, result.Error)
 	})
 
 	t.Run("custom resource matcher invalid type", func(t *testing.T) {
@@ -1546,7 +1546,7 @@ func TestInterpretMatcher(t *testing.T) {
 		runner := NewTestRunner()
 		result, err := runner.RunTest(script, "test")
 		require.NoError(t, err)
-		require.NoError(t, result.err)
+		require.NoError(t, result.Error)
 	})
 
 	t.Run("custom matcher with mismatching types", func(t *testing.T) {
@@ -1597,8 +1597,8 @@ func TestInterpretMatcher(t *testing.T) {
 		runner := NewTestRunner()
 		result, err := runner.RunTest(script, "test")
 		require.NoError(t, err)
-		require.Error(t, result.err)
-		assert.ErrorAs(t, result.err, &interpreter.TypeMismatchError{})
+		require.Error(t, result.Error)
+		assert.ErrorAs(t, result.Error, &interpreter.TypeMismatchError{})
 	})
 }
 
@@ -1621,7 +1621,7 @@ func TestInterpretEqualMatcher(t *testing.T) {
 		runner := NewTestRunner()
 		result, err := runner.RunTest(script, "test")
 		require.NoError(t, err)
-		require.NoError(t, result.err)
+		require.NoError(t, result.Error)
 	})
 
 	t.Run("equal matcher with struct", func(t *testing.T) {
@@ -1642,7 +1642,7 @@ func TestInterpretEqualMatcher(t *testing.T) {
 		runner := NewTestRunner()
 		result, err := runner.RunTest(script, "test")
 		require.NoError(t, err)
-		require.NoError(t, result.err)
+		require.NoError(t, result.Error)
 	})
 
 	t.Run("equal matcher with resource", func(t *testing.T) {
@@ -1683,7 +1683,7 @@ func TestInterpretEqualMatcher(t *testing.T) {
 		runner := NewTestRunner()
 		result, err := runner.RunTest(script, "test")
 		require.NoError(t, err)
-		require.NoError(t, result.err)
+		require.NoError(t, result.Error)
 	})
 
 	t.Run("with incorrect types", func(t *testing.T) {
@@ -1726,7 +1726,7 @@ func TestInterpretEqualMatcher(t *testing.T) {
 		runner := NewTestRunner()
 		result, err := runner.RunTest(script, "test")
 		require.NoError(t, err)
-		require.NoError(t, result.err)
+		require.NoError(t, result.Error)
 	})
 
 	t.Run("matcher or fail", func(t *testing.T) {
@@ -1748,8 +1748,8 @@ func TestInterpretEqualMatcher(t *testing.T) {
 		runner := NewTestRunner()
 		result, err := runner.RunTest(script, "test")
 		require.NoError(t, err)
-		require.Error(t, result.err)
-		assert.ErrorAs(t, result.err, &stdlib.AssertionError{})
+		require.Error(t, result.Error)
+		assert.ErrorAs(t, result.Error, &stdlib.AssertionError{})
 	})
 
 	t.Run("matcher and", func(t *testing.T) {
@@ -1771,8 +1771,8 @@ func TestInterpretEqualMatcher(t *testing.T) {
 		runner := NewTestRunner()
 		result, err := runner.RunTest(script, "test")
 		require.NoError(t, err)
-		require.Error(t, result.err)
-		assert.ErrorAs(t, result.err, &stdlib.AssertionError{})
+		require.Error(t, result.Error)
+		assert.ErrorAs(t, result.Error, &stdlib.AssertionError{})
 	})
 
 	t.Run("chained matchers", func(t *testing.T) {
@@ -1795,7 +1795,7 @@ func TestInterpretEqualMatcher(t *testing.T) {
 		runner := NewTestRunner()
 		result, err := runner.RunTest(script, "test")
 		require.NoError(t, err)
-		require.NoError(t, result.err)
+		require.NoError(t, result.Error)
 	})
 
 	t.Run("resource matcher or", func(t *testing.T) {
@@ -1883,7 +1883,7 @@ func TestInterpretExpectFunction(t *testing.T) {
 		runner := NewTestRunner()
 		result, err := runner.RunTest(script, "test")
 		require.NoError(t, err)
-		require.NoError(t, result.err)
+		require.NoError(t, result.Error)
 	})
 
 	t.Run("fail", func(t *testing.T) {
@@ -1900,8 +1900,8 @@ func TestInterpretExpectFunction(t *testing.T) {
 		runner := NewTestRunner()
 		result, err := runner.RunTest(script, "test")
 		require.NoError(t, err)
-		require.Error(t, result.err)
-		assert.ErrorAs(t, result.err, &stdlib.AssertionError{})
+		require.Error(t, result.Error)
+		assert.ErrorAs(t, result.Error, &stdlib.AssertionError{})
 	})
 
 	t.Run("different types", func(t *testing.T) {
@@ -1918,8 +1918,8 @@ func TestInterpretExpectFunction(t *testing.T) {
 		runner := NewTestRunner()
 		result, err := runner.RunTest(script, "test")
 		require.NoError(t, err)
-		require.Error(t, result.err)
-		assert.ErrorAs(t, result.err, &stdlib.AssertionError{})
+		require.Error(t, result.Error)
+		assert.ErrorAs(t, result.Error, &stdlib.AssertionError{})
 	})
 
 	t.Run("with explicit types", func(t *testing.T) {
@@ -1936,7 +1936,7 @@ func TestInterpretExpectFunction(t *testing.T) {
 		runner := NewTestRunner()
 		result, err := runner.RunTest(script, "test")
 		require.NoError(t, err)
-		require.NoError(t, result.err)
+		require.NoError(t, result.Error)
 	})
 
 	t.Run("mismatching types", func(t *testing.T) {
@@ -2111,7 +2111,7 @@ func TestReplacingImports(t *testing.T) {
 
 		result, err := runner.RunTest(code, "test")
 		assert.NoError(t, err)
-		assert.NoError(t, result.err)
+		assert.NoError(t, result.Error)
 	})
 
 	t.Run("address location", func(t *testing.T) {
@@ -2190,8 +2190,8 @@ func TestReplacingImports(t *testing.T) {
 
 		result, err := runner.RunTest(code, "test")
 		require.NoError(t, err)
-		require.Error(t, result.err)
-		assert.Contains(t, result.err.Error(), "account not found for address 0000000000000001")
+		require.Error(t, result.Error)
+		assert.Contains(t, result.Error.Error(), "account not found for address 0000000000000001")
 	})
 
 	t.Run("config not provided", func(t *testing.T) {
@@ -2266,10 +2266,10 @@ func TestReplacingImports(t *testing.T) {
 
 		result, err := runner.RunTest(code, "test")
 		require.NoError(t, err)
-		require.Error(t, result.err)
+		require.Error(t, result.Error)
 		assert.Contains(
 			t,
-			result.err.Error(),
+			result.Error.Error(),
 			"expecting an AddressLocation, but other location types are passed",
 		)
 	})

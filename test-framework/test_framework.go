@@ -60,8 +60,8 @@ var testScriptLocation = common.NewScriptLocation(nil, []byte("test"))
 type Results []Result
 
 type Result struct {
-	testName string
-	err      error
+	TestName string
+	Error    error
 }
 
 // ImportResolver is used to resolve and get the source code for imports.
@@ -113,8 +113,8 @@ func (r *TestRunner) RunTest(script string, funcName string) (result *Result, er
 	err = r.runTestTearDown(inter)
 
 	return &Result{
-		testName: funcName,
-		err:      testResult,
+		TestName: funcName,
+		Error:    testResult,
 	}, err
 }
 
@@ -150,8 +150,8 @@ func (r *TestRunner) RunTests(script string) (results Results, err error) {
 		err := r.invokeTestFunction(inter, funcName)
 
 		results = append(results, Result{
-			testName: funcName,
-			err:      err,
+			TestName: funcName,
+			Error:    err,
 		})
 	}
 
@@ -473,7 +473,7 @@ func PrettyPrintResults(results Results) string {
 	var sb strings.Builder
 	sb.WriteString("Test Results\n")
 	for _, result := range results {
-		sb.WriteString(PrettyPrintResult(result.testName, result.err))
+		sb.WriteString(PrettyPrintResult(result.TestName, result.Error))
 	}
 	return sb.String()
 }
