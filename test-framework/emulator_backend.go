@@ -460,23 +460,23 @@ func (e *EmulatorBackend) replaceImports(code string) string {
 	}
 
 	sb := strings.Builder{}
-	locationEnd := 0
+	importDeclEnd := 0
 
 	for _, importDeclaration := range program.ImportDeclarations() {
-		prevLocationEnd := locationEnd
-		locationEnd = importDeclaration.EndPos.Offset + 1
+		prevImportDeclEnd := importDeclEnd
+		importDeclEnd = importDeclaration.EndPos.Offset + 1
 
 		location, ok := importDeclaration.Location.(common.StringLocation)
 		if !ok {
 			// keep the import statement it as-is
-			sb.WriteString(code[prevLocationEnd:locationEnd])
+			sb.WriteString(code[prevImportDeclEnd:importDeclEnd])
 			continue
 		}
 
 		address, ok := e.configuration.Addresses[location.String()]
 		if !ok {
 			// keep import statement it as-is
-			sb.WriteString(code[prevLocationEnd:locationEnd])
+			sb.WriteString(code[prevImportDeclEnd:importDeclEnd])
 			continue
 		}
 
@@ -484,12 +484,12 @@ func (e *EmulatorBackend) replaceImports(code string) string {
 
 		locationStart := importDeclaration.LocationPos.Offset
 
-		sb.WriteString(code[prevLocationEnd:locationStart])
+		sb.WriteString(code[prevImportDeclEnd:locationStart])
 		sb.WriteString(addressStr)
 
 	}
 
-	sb.WriteString(code[locationEnd:])
+	sb.WriteString(code[importDeclEnd:])
 
 	return sb.String()
 }
